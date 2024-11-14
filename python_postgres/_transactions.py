@@ -4,7 +4,7 @@ from psycopg import AsyncCursor
 from psycopg.sql import Composed
 from psycopg_pool import AsyncConnectionPool
 
-from postgresql._operations import _exec_query
+from python_postgres._operations import _exec_query
 
 
 class Transaction:

@@ -3,12 +3,12 @@
 </p>
 
 <h1 align="center" style="font-size: 3rem; font-weight: 400; margin: -15px 0">
-postgresql
+Python Postgres
 </h1>
 
 ---
 
-postgresql is an abstraction over [psycopg](https://www.psycopg.org/psycopg3/docs/index.html) and aims to provide the
+pypostgres is an abstraction over [psycopg](https://www.psycopg.org/psycopg3/docs/index.html) and aims to provide the
 simplest way to interact with PostgreSQL databases.
 
 **I have just started this project, and it is not ready for production use. I am still working on every aspect of it.**
@@ -24,7 +24,7 @@ pip install postgresql
 ### Usage
 
 ```python
-from postgresql import Postgres
+from python_postgres import Postgres
 
 pg = Postgres("pgadmin", "password", "pg-is-king.postgres.database.azure.com")
 
