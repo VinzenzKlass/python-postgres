@@ -14,6 +14,9 @@ async def _exec_query(
     is_retry: bool = False,
 ) -> None:
     try:
+        if not params:
+            await cur.execute(query)
+            return
         if isinstance(params, list):
             await cur.executemany(query, params)
             return
