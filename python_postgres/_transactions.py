@@ -1,10 +1,8 @@
-from typing import LiteralString
-
 from psycopg import AsyncCursor
-from psycopg.sql import Composed
 from psycopg_pool import AsyncConnectionPool
 
-from python_postgres._operations import _exec_query
+from ._operations import _exec_query
+from .types import Params, Query
 
 
 class Transaction:
@@ -12,5 +10,5 @@ class Transaction:
         self._cur = cur
         self._pool = pool
 
-    async def __call__(self, query: LiteralString | Composed, params: tuple | list[tuple] = ()):
+    async def __call__(self, query: Query, params: Params = ()) -> None:
         await _exec_query(self._pool, self._cur, query, params)

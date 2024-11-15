@@ -1,16 +1,16 @@
 import asyncio
 import re
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, LiteralString
+from typing import AsyncIterator
 from urllib.parse import quote_plus
 
 import psycopg
-from psycopg.sql import Composed
 from psycopg_pool import AsyncConnectionPool
 
 from ._operations import _exec_query, _results
 from ._transactions import Transaction
 from .exceptions import PGError
+from .types import Params, Query
 
 
 class Postgres:
@@ -23,19 +23,32 @@ class Postgres:
         database: str = "postgres",
         pool_min_size: int = 10,
         pool_max_size: int = 50,
-        open_pool: bool = False,
     ):
+        """
+        Initialize the Postgres class to connect to a PostgreSQL database.
+        :param user: The username to connect to the database.
+        :param password: The password for the given user to connect to the database.
+        :param host: The host of the database, for example, `
+        :param port: The port of the database, default is 5432.
+        :param database: The database name to connect to, default is `postgres`.
+        :param pool_min_size: The minimum number of connections to keep in the pool.
+        :param pool_max_size: The maximum number of connections to keep in the pool.
+        """
         self._uri = f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{database}"
         self._param_pattern = re.compile(r"\$\d+")
         self._pool = _con_pool = AsyncConnectionPool(
-            self._uri, min_size=pool_min_size, max_size=pool_max_size, open=open_pool
+            self._uri, min_size=pool_min_size, max_size=pool_max_size, open=False
         )
 
-    async def __call__(
-        self, query: LiteralString | Composed, params: tuple | list[tuple] = ()
-    ) -> list[tuple] | int:
+    async def __call__(self, query: Query, params: Params = ()) -> list[tuple] | int:
+        """
+        Execute a query and return the results. Check the `psycopg` documentation for more
+        information.
+        :param query:  The query to execute.
+        :param params: The parameters to pass to the query.
+        :return: The results of the query.
+        """
         try:
-            await self.__ensure_pool_open()
             async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
                 async with con.cursor(binary=True) as cur:  # type: psycopg.AsyncCursor
                     await _exec_query(self._pool, cur, query, params)
@@ -44,14 +57,13 @@ class Postgres:
         except psycopg.Error as error:
             raise PGError from error
 
-    async def __ensure_pool_open(self):
-        if self._pool.closed:
-            await self._pool.open()
-
     @asynccontextmanager
     async def transaction(self) -> AsyncIterator[Transaction]:
+        """
+        Create a transaction context manager to execute multiple queries in a single transaction.
+        You can call the transaction the same way you would call the `Postgres` instance itself.
+        """
         try:
-            await self.__ensure_pool_open()
             async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
                 async with con.cursor(binary=True) as cur:  # type: psycopg.AsyncCursor
                     yield Transaction(self._pool, cur)
@@ -60,9 +72,11 @@ class Postgres:
             raise PGError from error
 
     async def open(self):
+        """Open the connection pool."""
         await self._pool.open()
 
     async def close(self):
+        """Close the connection pool."""
         await self._pool.close()
 
     def __del__(self):
