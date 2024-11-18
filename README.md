@@ -49,6 +49,28 @@ async def main():
     # Be civilized and close it yourself.
 ```
 
+### Pydantic Integration
+
+Python Postgres supports [Pydantic](https://docs.pydantic.dev/latest/) Models as insert parameters.
+
+```python
+from pydantic import BaseModel
+
+
+class File(BaseModel):
+    file_name: str
+    size: int
+
+
+async def main():
+    await pg.open()
+    await pg(
+        "INSERT INTO files (file_name, size) VALUES (%s, %s)",
+        File(file_name="rubbish.pdf", size=8096),
+    )
+    await pg.close()
+```
+
 ### A more in-depth look
 
 The basic idea of this project is to provide one callable instance of the `Postgres` class. The `Postgres` class manages

@@ -1,5 +1,4 @@
 import asyncio
-import re
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
 from urllib.parse import quote_plus
@@ -35,17 +34,21 @@ class Postgres:
         :param pool_max_size: The maximum number of connections to keep in the pool.
         """
         self._uri = f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{database}"
-        self._param_pattern = re.compile(r"\$\d+")
         self._pool = _con_pool = AsyncConnectionPool(
             self._uri, min_size=pool_min_size, max_size=pool_max_size, open=False
         )
 
-    async def __call__(self, query: Query, params: Params = ()) -> list[tuple[Any, ...]] | int:
+    async def __call__(
+        self, query: Query, params: Params = (), **kwargs
+    ) -> list[tuple[Any, ...]] | int:
         """
         Execute a query and return the results. Check the `psycopg` documentation for more
         information.
         :param query:  The query to execute.
         :param params: The parameters to pass to the query.
+        :param kwargs: Keyword arguments passed to the Pydantic serialization method,
+               such as `by_alias`, `exclude`, etc. This is usually the easiest way to
+               make sure your model fits the table schema definition.
         :return: The results of the query.
         """
         try:

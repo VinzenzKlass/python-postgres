@@ -12,6 +12,8 @@ class Transaction:
         self._cur = cur
         self._pool = pool
 
-    async def __call__(self, query: Query, params: Params = ()) -> list[tuple[Any, ...]] | int:
-        await _exec_query(self._pool, self._cur, query, params)
+    async def __call__(
+        self, query: Query, params: Params = (), **kwargs
+    ) -> list[tuple[Any, ...]] | int:
+        await _exec_query(self._pool, self._cur, query, params, **kwargs)
         return await _results(self._cur)

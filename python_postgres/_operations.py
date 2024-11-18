@@ -3,6 +3,7 @@ from typing import Any
 import psycopg
 from psycopg import AsyncCursor
 from psycopg_pool import AsyncConnectionPool
+from pydantic import BaseModel
 
 from .exceptions import PGError
 from .types import Params, Query
@@ -14,11 +15,16 @@ async def _exec_query(
     query: Query,
     params: Params,
     is_retry: bool = False,
+    **kwargs,
 ) -> None:
     try:
         if not params:
             await cur.execute(query)
             return
+        if isinstance(params, BaseModel) or (
+            isinstance(params, list) and isinstance(params[0], BaseModel)
+        ):
+            params = __pydantic_param_to_values(params, **kwargs)
         if isinstance(params, list):
             await cur.executemany(query, params)
             return
@@ -32,3 +38,11 @@ async def _exec_query(
 
 async def _results(cur: AsyncCursor) -> list[tuple[Any, ...]] | int:
     return await cur.fetchall() if cur.pgresult and cur.pgresult.ntuples > 0 else cur.rowcount
+
+
+def __pydantic_param_to_values(model: BaseModel | list[BaseModel], **kwargs) -> tuple | list[tuple]:
+    return (
+        [tuple(m.model_dump(**kwargs).values()) for m in model]
+        if isinstance(model, list)
+        else tuple(model.model_dump(**kwargs).values())
+    )
