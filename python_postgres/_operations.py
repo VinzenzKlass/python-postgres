@@ -1,3 +1,5 @@
+from typing import Any
+
 import psycopg
 from psycopg import AsyncCursor
 from psycopg_pool import AsyncConnectionPool
@@ -28,5 +30,5 @@ async def _exec_query(
         await _exec_query(pool, cur, query, params, True)
 
 
-async def _results(cur: AsyncCursor) -> list[tuple] | int:
+async def _results(cur: AsyncCursor) -> list[tuple[Any, ...]] | int:
     return await cur.fetchall() if cur.pgresult and cur.pgresult.ntuples > 0 else cur.rowcount
