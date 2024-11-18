@@ -1,7 +1,7 @@
 import asyncio
 import re
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 from urllib.parse import quote_plus
 
 import psycopg
@@ -40,7 +40,7 @@ class Postgres:
             self._uri, min_size=pool_min_size, max_size=pool_max_size, open=False
         )
 
-    async def __call__(self, query: Query, params: Params = ()) -> list[tuple] | int:
+    async def __call__(self, query: Query, params: Params = ()) -> list[tuple[Any, ...]] | int:
         """
         Execute a query and return the results. Check the `psycopg` documentation for more
         information.
