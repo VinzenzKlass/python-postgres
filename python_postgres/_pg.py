@@ -5,9 +5,8 @@ from urllib.parse import quote_plus
 
 import psycopg
 from psycopg_pool import AsyncConnectionPool
-from pydantic import BaseModel
 
-from ._operations import _exec_query, _pydantic_to_query_and_values, _results
+from ._operations import _exec_query, _results
 from ._transactions import Transaction
 from .exceptions import PGError
 from .types import Params, Query
@@ -60,23 +59,6 @@ class Postgres:
                     return await _results(cur)
         except psycopg.Error as error:
             raise PGError from error
-
-    async def write_pydantic(
-        self, table_name: str, model: BaseModel | list[BaseModel], **kwargs
-    ) -> int:
-        """
-        Write a Pydantic model to the database. The model must have the same fields as the table
-        in the database.
-        :param table_name: The name of the table to write to.
-        :param model: The Pydantic model to write to the database.
-        :param kwargs: Keyword arguments passed to the Pydantic serialization method,
-                       such as `by_alias`, `exclude`, etc. This is usually the easiest way to
-                       make sure your model fits the table schema definition.
-        :return: The number of rows affected.
-        """
-        query, values = _pydantic_to_query_and_values(table_name, model, **kwargs)
-        print(query.as_string())
-        return await self.__call__(query, values)
 
     @asynccontextmanager
     async def transaction(self) -> AsyncIterator[Transaction]:

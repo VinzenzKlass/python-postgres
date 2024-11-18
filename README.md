@@ -71,48 +71,6 @@ async def main():
     await pg.close()
 ```
 
-Since this can be cumbersome and redundant to spell out, Python Postgres can generate this Query for you.
-
-```python
-class File(BaseModel):
-    file_name: str
-    size: int
-    internal_only_field: str = "This field must not be written to the database"
-    field_1: Optional[str] = None
-    field_2: Optional[str] = None
-    field_3: Optional[str] = None
-    field_4: Optional[str] = None
-    field_5: Optional[str] = None
-    field_6: Optional[str] = None
-    field_7: Optional[str] = None
-    field_8: Optional[str] = None
-    field_9: Optional[str] = None
-    field_10: Optional[str] = None
-
-
-async def main():
-    await pg.open()
-    await pg.write_pydantic(
-        "features", File(file_name="rubbish.pdf", size=8096), exclude={"internal_only_field"}
-    )
-    await pg.close()
-``` 
-
-This will generate the following query before calling it with the value of the passed model. You can also pass a list of
-models to insert multiple rows at once. The extra keywords arguments will be passed to the model serialization.
-
-```sql
-INSERT INTO "features" ("file_name", "size", "field_1", "field_2", "field_3", "field_4", "field_5", "field_6",
-                        "field_7", "field_8", "field_9", "field_10")
-VALUES ($1, $2, $3, $4, $5 $6, $7, $8, $9, $10, $11, $12) 
-```
-
-**Python Postgres does not aim to be an ORM or provide an object-oriented experience, and it will not generate queries
-for you beyond this one use-case.** If you are looking for a Pydantic based ORM, have a look
-at [SQLModel](https://sqlmodel.tiangolo.com/).
-Python Postgres is focused on SQL and in this case just provides this utility around Pydantic to support one further
-Type you can pass as parameters to your queries.
-
 ### A more in-depth look
 
 The basic idea of this project is to provide one callable instance of the `Postgres` class. The `Postgres` class manages
