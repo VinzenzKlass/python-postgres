@@ -1,5 +1,3 @@
-from typing import Any
-
 from psycopg import AsyncCursor
 from psycopg_pool import AsyncConnectionPool
 
@@ -12,8 +10,6 @@ class Transaction:
         self._cur = cur
         self._pool = pool
 
-    async def __call__(
-        self, query: Query, params: Params = (), **kwargs
-    ) -> list[tuple[Any, ...]] | int:
+    async def __call__(self, query: Query, params: Params = (), **kwargs) -> list[tuple] | int:
         await _exec_query(self._pool, self._cur, query, params, **kwargs)
         return await _results(self._cur)
