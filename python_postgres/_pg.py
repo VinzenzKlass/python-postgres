@@ -22,6 +22,7 @@ class Postgres:
         database: str = "postgres",
         pool_min_size: int = 10,
         pool_max_size: int = 50,
+        open_pool: bool = False,
     ):
         """
         Initialize the Postgres class to connect to a PostgreSQL database.
@@ -32,10 +33,12 @@ class Postgres:
         :param database: The database name to connect to, default is `postgres`.
         :param pool_min_size: The minimum number of connections to keep in the pool.
         :param pool_max_size: The maximum number of connections to keep in the pool.
+        :param open_pool: Whether to open the connection pool immediately. This requires a running
+                     event loop.
         """
         self._uri = f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{database}"
         self._pool = _con_pool = AsyncConnectionPool(
-            self._uri, min_size=pool_min_size, max_size=pool_max_size, open=False
+            self._uri, min_size=pool_min_size, max_size=pool_max_size, open=open_pool
         )
 
     async def __call__(self, query: Query, params: Params = (), **kwargs) -> list[tuple] | int:

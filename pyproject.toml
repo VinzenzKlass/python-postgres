@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "python-postgres"
-version = "0.0.4"
-description = "pypostgres aims to provide the simplest way to interact with PostgreSQL databases."
+version = "0.0.6"
+description = "python-postgres aims to provide the simplest way to interact with PostgreSQL databases."
 authors = ["Vinzenz Klass <vinzenz.klass@ba.valantic.com>"]
 repository = "https://github.com/VinzenzKlass/python-postgres"
 readme = "README.md"
