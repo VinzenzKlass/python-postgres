@@ -14,6 +14,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "psycopg[binary]>=3.2.5",
     "ruff>=0.9.2",
     "pre-commit>=4.0.1",
 ]
