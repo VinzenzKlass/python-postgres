@@ -22,23 +22,20 @@ class Postgres:
         database: str = "postgres",
         pool_min_size: int = 10,
         pool_max_size: int = 50,
-        open_pool: bool = False,
     ):
         """
         Initialize the Postgres class to connect to a PostgreSQL database.
         :param user: The username to connect to the database.
         :param password: The password for the given user to connect to the database.
-        :param host: The host of the database, for example, `
+        :param host: The host of the database.
         :param port: The port of the database, default is 5432.
         :param database: The database name to connect to, default is `postgres`.
         :param pool_min_size: The minimum number of connections to keep in the pool.
         :param pool_max_size: The maximum number of connections to keep in the pool.
-        :param open_pool: Whether to open the connection pool immediately. This requires a running
-                     event loop.
         """
         self._uri = f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{database}"
         self._pool = _con_pool = AsyncConnectionPool(
-            self._uri, min_size=pool_min_size, max_size=pool_max_size, open=open_pool
+            self._uri, min_size=pool_min_size, max_size=pool_max_size, open=False
         )
 
     async def __call__(self, query: Query, params: Params = (), **kwargs) -> list[tuple] | int:
@@ -85,10 +82,10 @@ class Postgres:
 
     def __del__(self):
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             if loop.is_running():
                 loop.create_task(self._pool.close())
             else:
                 loop.run_until_complete(self._pool.close())
-        except Exception:
+        except Exception:  # noqa
             pass
