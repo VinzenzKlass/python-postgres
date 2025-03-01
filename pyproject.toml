@@ -7,6 +7,10 @@ readme = "README.md"
 requires-python = ">=3.10.4"
 keywords = ["python-postgres", "postgres", "PostgreSQL"]
 
+
+[project.urls]
+Psycopg = "https://www.psycopg.org/psycopg3/docs/index.html"
+
 dependencies = [
     "psycopg[pool]>=3.2.5",
     "pydantic>=2.10.6",
