@@ -223,6 +223,25 @@ await pg("INSERT INTO comments (content) VALUES (%s);", [("Comment 1",), ("Comme
 
 In these cases you must construct the entire query yourself.
 
+
+### Transactions
+You can use the `transaction` context manager to run a transaction. This will automatically commit the transaction
+when the context manager exits, or rollback it if an exception is raised.
+
+```python
+async with pg.transaction() as tran:
+    await tran("DELETE FROM comments WHERE id = 1;")
+    await tran("INSERT INTO comments (content) VALUES (%s);", [("Comment 1",), ("Comment 2",)])
+```
+This will execute the two queries in a single transaction and then automatically commit it. If an error occurs, nothing in the transaction scope will be applied, the connection returned to the pool and the error raised:
+
+```python
+async with pg.transaction() as tran:
+    await tran("DELETE FROM comments WHERE id = 38;")  # Not applied
+    await tran("INSERT INTO comments (content) VALUES (%s);", [("Comment 1",), ("Comment 2",)]) # Not applied
+    raise ValueError("The almighty Elephant has rejected your submission.")
+```
+
 ### Notes
 
 Other than providing simpler syntax through a thin abstraction, this project inherits all the design choices of psycopg,

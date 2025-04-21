@@ -80,9 +80,12 @@ class Postgres:
         You can call the transaction the same way you would call the `Postgres` instance itself.
         """
         try:
+            if not self.__open:
+                await self._pool.open()
+                self.__open = True
             async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
                 async with con.cursor(binary=True) as cur:  # type: psycopg.AsyncCursor
-                    yield Transaction(self._pool, cur)
+                    yield Transaction(self._pool, cur, self._return_raw)
                     await con.commit()
         except psycopg.Error as error:
             raise PGError from error

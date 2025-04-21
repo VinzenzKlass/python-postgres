@@ -1,15 +1,23 @@
+from typing import Type, TypeVar
+
 from psycopg import AsyncCursor
 from psycopg_pool import AsyncConnectionPool
+from pydantic import BaseModel
 
 from ._operations import _exec_query, _results
 from .types import Params, Query
 
+T = TypeVar("T", bound=BaseModel)
+
 
 class Transaction:
-    def __init__(self, pool: AsyncConnectionPool, cur: AsyncCursor):
+    def __init__(self, pool: AsyncConnectionPool, cur: AsyncCursor, return_raw: bool):
         self._cur = cur
         self._pool = pool
+        self._return_raw = return_raw
 
-    async def __call__(self, query: Query, params: Params = (), **kwargs) -> list[tuple] | int:
+    async def __call__(
+        self, query: Query, params: Params = (), model: Type[T] = None, **kwargs
+    ) -> list[T | tuple] | int:
         await _exec_query(self._pool, self._cur, query, params, **kwargs)
-        return await _results(self._cur)
+        return await _results(self._cur, self._return_raw)
