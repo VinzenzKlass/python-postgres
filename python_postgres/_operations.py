@@ -39,10 +39,13 @@ async def _exec_query(
 
 async def _results(cur: AsyncCursor, model: Type[BaseModel] = None) -> list[Type[BaseModel]] | int:
     cols = {col.name: __pg_types(col.type_display) for col in cur.description}
-    model = model or create_model("Result", **cols)
     col_names = cols.keys()
+    model = model or create_model("Result", **cols)
     return (
-        [model(**dict(zip(col_names, row, strict=True))) for row in await cur.fetchall()]
+        [
+            model.model_validate(dict(zip(col_names, row, strict=True)))
+            for row in await cur.fetchall()
+        ]
         if cur.pgresult and cur.pgresult.ntuples > 0
         else cur.rowcount
     )

@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from typing import AsyncIterator, Optional, Type
 from urllib.parse import quote_plus
 
 import psycopg
@@ -39,12 +39,16 @@ class Postgres:
         )
         self.__open = False
 
-    async def __call__(self, query: Query, params: Params = (), **kwargs) -> list[BaseModel] | int:
+    async def __call__(
+        self, query: Query, params: Params = (), model: Optional[Type[BaseModel]] = None, **kwargs
+    ) -> list[BaseModel] | int:
         """
         Execute a query and return the results. Check the `psycopg` documentation for more
         information.
         :param query:  The query to execute.
         :param params: The parameters to pass to the query.
+        :param model: The Pydantic model to serialize the results into. If not provided, a new
+                      model with all columns in the query will be used.
         :param kwargs: Keyword arguments passed to the Pydantic serialization method,
                such as `by_alias`, `exclude`, etc. This is usually the easiest way to
                make sure your model fits the table schema definition.#
@@ -58,7 +62,7 @@ class Postgres:
                 async with con.cursor(binary=True) as cur:  # type: psycopg.AsyncCursor
                     await _exec_query(self._pool, cur, query, params)
                     await con.commit()
-                    return await _results(cur)
+                    return await _results(cur, model)
         except psycopg.Error as error:
             raise PGError from error
 
