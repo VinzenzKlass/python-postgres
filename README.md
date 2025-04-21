@@ -9,7 +9,7 @@ Python Postgres
 ---
 
 Python Postgres is an abstraction over [psycopg](https://www.psycopg.org/psycopg3/docs/index.html) and aims to provide
-the simplest way to interact with PostgreSQL databases in Python.
+a simple, SQL-based way to interact with PostgreSQL databases in Python.
 
 **I have just started this project, and it is not ready for production use. I am still working on every aspect of it and
 may abandon it at any point without warning.**
