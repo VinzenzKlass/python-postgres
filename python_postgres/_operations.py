@@ -56,37 +56,36 @@ async def _results(cur: AsyncCursor, model: Type[BaseModel] = None) -> list[Type
     ]
 
 
-def _expand_values(query: Query, values: Values) -> tuple[Composed, list[tuple]]:
+def _expand_values(query: Query, values: Values) -> tuple[Composed, tuple]:
     col_names = (
         list(set(chain.from_iterable(v.model_dump().keys() for v in values.values)))
         if isinstance(values.values, list)
         else values.values.model_dump().keys()
     )
-    val_stmt = (
-        sql.SQL(" (")
-        + sql.SQL(", ").join(sql.Identifier(col) for col in col_names)
-        + sql.SQL(")")
-        + sql.SQL(" VALUES (")
-        + sql.SQL(", ").join(sql.Placeholder() for _ in col_names)
-        + sql.SQL(");")
-    )
-    vals: list[tuple] = []
-    if isinstance(values.values, list):
-        for v in values.values:
-            row_vals, fields = [], v.model_dump(exclude_none=True)
-            for c in col_names:
-                row_vals.append(fields.get(c, "DEFAULT"))
-            vals.append(tuple(row_vals))
-    else:
-        row_vals, fields = [], values.values.model_dump(exclude_none=True)
+    if not isinstance(values.values, list):
+        values = Values([values.values])
+    vals, row_sqls = [], []
+    for v in values.values:
+        placeholders, fields = [], v.model_dump(exclude_none=True)
         for c in col_names:
-            row_vals.append(fields.get(c, "DEFAULT"))
-        vals.append(tuple(row_vals))
+            if c in fields:
+                placeholders.append(sql.Placeholder())
+                vals.append(fields[c])
+            else:
+                placeholders.append(sql.DEFAULT)
+        row_sql = sql.SQL("(") + sql.SQL(", ").join(placeholders) + sql.SQL(")")
+        row_sqls.append(row_sql)
+    values_sql = sql.SQL(", ").join(row_sqls)
+
+    columns_sql = (
+        sql.SQL("(") + sql.SQL(", ").join(sql.Identifier(col) for col in col_names) + sql.SQL(")")
+    )
     if isinstance(query, str):
         query = sql.SQL(query)
-    full_statement: Composed = query + val_stmt
+
+    full_statement = query + columns_sql + sql.SQL(" VALUES ") + values_sql + sql.SQL(";")
     # debug = full_statement.as_string()
-    return full_statement, vals
+    return full_statement, tuple(vals)
 
 
 def __pydantic_param_to_values(model: BaseModel | list[BaseModel], **kwargs) -> tuple | list[tuple]:
