@@ -4,7 +4,7 @@ from typing import Type
 import psycopg
 from psycopg import AsyncCursor
 from psycopg_pool import AsyncConnectionPool
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel, Field, create_model
 
 from .exceptions import PGError
 from .types import Params, Query
@@ -38,17 +38,17 @@ async def _exec_query(
 
 
 async def _results(cur: AsyncCursor, model: Type[BaseModel] = None) -> list[Type[BaseModel]] | int:
-    cols = {col.name: __pg_types(col.type_display) for col in cur.description}
+    if not cur.pgresult or not cur.description or cur.rowcount == 0:
+        return cur.rowcount
+    cols = {
+        col.name: (__pg_types(col.type_display) | None, Field(default=None))
+        for col in cur.description
+    }
     col_names = cols.keys()
     model = model or create_model("Result", **cols)
-    return (
-        [
-            model.model_validate(dict(zip(col_names, row, strict=True)))
-            for row in await cur.fetchall()
-        ]
-        if cur.pgresult and cur.pgresult.ntuples > 0
-        else cur.rowcount
-    )
+    return [
+        model.model_validate(dict(zip(col_names, row, strict=True))) for row in await cur.fetchall()
+    ]
 
 
 def __pydantic_param_to_values(model: BaseModel | list[BaseModel], **kwargs) -> tuple | list[tuple]:
@@ -60,8 +60,12 @@ def __pydantic_param_to_values(model: BaseModel | list[BaseModel], **kwargs) -> 
 
 
 def __pg_types(raw: str) -> Type:
+    if "datetime" in raw or "timestamp" in raw:
+        return datetime.datetime
     if "date" in raw:
         return datetime.date
+    if "json" in raw:
+        return dict
     if "int" in raw:
         return int
     if "bool" in raw:
