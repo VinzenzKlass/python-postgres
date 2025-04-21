@@ -42,9 +42,13 @@ async def _exec_query(
         await _exec_query(pool, cur, query, params, True)
 
 
-async def _results(cur: AsyncCursor, model: Type[BaseModel] = None) -> list[Type[BaseModel]] | int:
+async def _results(
+    cur: AsyncCursor, raw: bool, model: Type[BaseModel] = None
+) -> list[Type[BaseModel] | tuple] | int:
     if not cur.pgresult or not cur.description or cur.rowcount == 0:
         return cur.rowcount
+    if raw:
+        return await cur.fetchall()
     cols = {
         col.name: (__pg_types(col.type_display) | None, Field(default=None))
         for col in cur.description
@@ -113,4 +117,6 @@ def __pg_types(raw: str) -> Type:
         return float
     if "double" in raw:
         return float
+    if "bytea" in raw:
+        return bytes
     return str

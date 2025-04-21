@@ -24,6 +24,7 @@ class Postgres:
         database: str = "postgres",
         pool_min_size: int = 10,
         pool_max_size: int = 50,
+        return_raw: bool = False,
     ):
         """
         Initialize the Postgres class to connect to a PostgreSQL database.
@@ -34,24 +35,27 @@ class Postgres:
         :param database: The database name to connect to, default is `postgres`.
         :param pool_min_size: The minimum number of connections to keep in the pool.
         :param pool_max_size: The maximum number of connections to keep in the pool.
+        :param return_raw: If True, return the raw results from the database as provided by
+                           psycopg. If False, results are parsed to Pydantic models.
         """
         self._uri = f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{database}"
         self._pool = AsyncConnectionPool(
             self._uri, min_size=pool_min_size, max_size=pool_max_size, open=False
         )
+        self._return_raw = return_raw
         self.__open = False
 
     async def __call__(
         self, query: Query, params: Params = (), model: Type[T] = None, **kwargs
-    ) -> list[T] | int:
+    ) -> list[T | tuple] | int:
         """
         Execute a query and return the results. Check the `psycopg` documentation for more
         information.
         :param query:  The query to execute.
         :param params: The parameters to pass to the query.
-        :param model: The Pydantic model to serialize the results into. If not provided, a new
+        :param model: The Pydantic model to parse the results into. If not provided, a new
                       model with all columns in the query will be used.
-        :param kwargs: Keyword arguments passed to the Pydantic serialization method,
+        :param kwargs: Keyword arguments passed to the Pydantic validation method,
                such as `by_alias`, `exclude`, etc. This is usually the easiest way to
                make sure your model fits the table schema definition.#
         :return: The results of the query.
@@ -65,7 +69,7 @@ class Postgres:
                     await _exec_query(self._pool, cur, query, params)
                     if not cur.statusmessage or not cur.statusmessage.startswith("SELECT"):
                         await con.commit()
-                    return await _results(cur, model)
+                    return await _results(cur, self._return_raw, model)
         except psycopg.Error as error:
             raise PGError from error
 
