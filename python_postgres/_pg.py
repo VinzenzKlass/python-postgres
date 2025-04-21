@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Optional, Type
+from typing import AsyncIterator, Type, TypeVar
 from urllib.parse import quote_plus
 
 import psycopg
@@ -10,6 +10,8 @@ from ._operations import _exec_query, _results
 from ._transactions import Transaction
 from .exceptions import PGError
 from .types import Params, Query
+
+T = TypeVar("T", bound=BaseModel)
 
 
 class Postgres:
@@ -40,8 +42,8 @@ class Postgres:
         self.__open = False
 
     async def __call__(
-        self, query: Query, params: Params = (), model: Optional[Type[BaseModel]] = None, **kwargs
-    ) -> list[BaseModel] | int:
+        self, query: Query, params: Params = (), model: Type[T] = None, **kwargs
+    ) -> list[T] | int:
         """
         Execute a query and return the results. Check the `psycopg` documentation for more
         information.
