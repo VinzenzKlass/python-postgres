@@ -38,7 +38,7 @@ async def main():
     async with pg.transaction() as tran:
         file_id = (
             await tran(
-                "INSERT INTO files (name, size) VALUES VALUES (%s, %s) RETURNING file_id;",
+                "INSERT INTO files (name, size) VALUES (%s, %s) RETURNING file_id;",
                 ("you_may_not_exist", 0),
             )
         )[0]
@@ -47,6 +47,7 @@ async def main():
     await pg.close()  # Close the connection pool. Python Postgres will attempt to automatically
     # close the pool when the instance is garbage collected, but this is not guaranteed to succeed.
     # Be civilized and close it yourself.
+
 ```
 
 ### Pydantic Integration

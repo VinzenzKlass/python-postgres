@@ -63,7 +63,7 @@ class Postgres:
             async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
                 async with con.cursor(binary=True) as cur:  # type: psycopg.AsyncCursor
                     await _exec_query(self._pool, cur, query, params)
-                    if not cur.statusmessage.startswith("SELECT"):
+                    if not cur.statusmessage or not cur.statusmessage.startswith("SELECT"):
                         await con.commit()
                     return await _results(cur, model)
         except psycopg.Error as error:
