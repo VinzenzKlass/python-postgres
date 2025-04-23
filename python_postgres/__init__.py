@@ -1,6 +1,5 @@
-from psycopg import sql
+from psycopg import errors, sql
 
 from ._client import Postgres
-from .types import Values
 
-__all__ = ["Postgres", "Values", "sql"]
+__all__ = ["Postgres", "sql", "errors"]

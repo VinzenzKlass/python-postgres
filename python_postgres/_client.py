@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Optional, Type, TypeVar, overload
+from typing import AsyncIterator, LiteralString, Optional, Type, TypeVar, overload
 from urllib.parse import quote_plus
 
 import psycopg
@@ -7,9 +7,8 @@ from psycopg.rows import class_row
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
 
-from ._operations import _exec_query
+from ._operations import exec_query, expand_values
 from ._transactions import Transaction
-from .exceptions import PGError
 from .types import Params, Query
 
 T = TypeVar("T", bound=BaseModel)
@@ -65,21 +64,29 @@ class Postgres:
                make sure your model fits the table schema definition.#
         :return: The results of the query.
         """
-        try:
-            await self._ensure_open()
-            row_factory = class_row(model) if model else None
-            async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
-                async with con.cursor(binary=True, row_factory=row_factory) as cur:  # type: psycopg.AsyncCursor
-                    await _exec_query(self._pool, cur, query, params)
-                    if not cur.statusmessage or not cur.statusmessage.startswith("SELECT"):
-                        await con.commit()
-                    return (
-                        cur.rowcount
-                        if not cur.pgresult or not cur.description or cur.rowcount == 0
-                        else await cur.fetchall()
-                    )
-        except psycopg.Error as error:
-            raise PGError from error
+        await self._ensure_open()
+        row_factory = class_row(model) if model else None
+        async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
+            async with con.cursor(binary=True, row_factory=row_factory) as cur:  # type: psycopg.AsyncCursor
+                await exec_query(self._pool, cur, query, params)
+                if not cur.statusmessage or not cur.statusmessage.startswith("SELECT"):
+                    await con.commit()
+                return (
+                    cur.rowcount
+                    if not cur.pgresult or not cur.description or cur.rowcount == 0
+                    else await cur.fetchall()
+                )
+
+    async def insert(
+        self, table_name: LiteralString, params: BaseModel | list[BaseModel], prepare: bool = False
+    ) -> int:
+        await self._ensure_open()
+        query, params = expand_values(table_name, params)
+        async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
+            async with con.cursor(binary=True) as cur:  # type: psycopg.AsyncCursor
+                await cur.execute(query, params, prepare=prepare)
+                await con.commit()
+                return cur.rowcount
 
     @asynccontextmanager
     async def transaction(self) -> AsyncIterator[Transaction]:
@@ -87,26 +94,20 @@ class Postgres:
         Create a transaction context manager to execute multiple queries in a single transaction.
         You can call the transaction the same way you would call the `Postgres` instance itself.
         """
-        try:
-            await self._ensure_open()
-            async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
-                async with con.cursor(binary=True) as cur:  # type: psycopg.AsyncCursor
-                    yield Transaction(self._pool, cur)
-                    await con.commit()
-        except psycopg.Error as error:
-            raise PGError from error
+        await self._ensure_open()
+        async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
+            async with con.cursor(binary=True) as cur:  # type: psycopg.AsyncCursor
+                yield Transaction(self._pool, cur)
+                await con.commit()
 
     @asynccontextmanager
     async def connection(self) -> AsyncIterator[psycopg.AsyncConnection]:
         """
-        Get a psycopg connection object.
+        Acquire a psycopg AsyncConnection from the pool for direct use.
         """
-        try:
-            await self._ensure_open()
-            async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
-                yield con
-        except psycopg.Error as error:
-            raise PGError from error
+        await self._ensure_open()
+        async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
+            yield con
 
     async def close(self) -> None:
         if self.__open:

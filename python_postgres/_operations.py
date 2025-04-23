@@ -1,5 +1,5 @@
 from itertools import chain
-from typing import Type
+from typing import LiteralString, Type
 
 import psycopg
 from psycopg import AsyncCursor, sql
@@ -7,11 +7,10 @@ from psycopg.sql import Composed
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
 
-from .exceptions import PGError
-from .types import Params, Query, Values
+from .types import Params, Query
 
 
-async def _exec_query(
+async def exec_query(
     pool: AsyncConnectionPool,
     cur: AsyncCursor,
     query: Query,
@@ -23,8 +22,6 @@ async def _exec_query(
         if not params:
             await cur.execute(query)
             return
-        if isinstance(params, Values):
-            query, params = _expand_values(query, params)
         elif isinstance(params, BaseModel) or (
             isinstance(params, list) and isinstance(params[0], BaseModel)
         ):
@@ -35,27 +32,31 @@ async def _exec_query(
         await cur.execute(query, params)
     except psycopg.OperationalError as error:
         if is_retry:
-            raise PGError from error
+            raise error
         await pool.check()
-        await _exec_query(pool, cur, query, params, True)
+        await exec_query(pool, cur, query, params, True)
 
 
-async def _results(cur: AsyncCursor) -> list[Type[BaseModel] | tuple] | int:
+async def results(cur: AsyncCursor) -> list[Type[BaseModel] | tuple] | int:
     if not cur.pgresult or not cur.description or cur.rowcount == 0:
         return cur.rowcount
     return await cur.fetchall()
 
 
-def _expand_values(query: Query, values: Values) -> tuple[Composed, tuple]:
+def expand_values(
+    table_name: LiteralString, values: BaseModel | list[BaseModel]
+) -> tuple[Composed, tuple]:
+    # TODO: Refactor to avoid all the redundant work.
+    query = sql.SQL("INSERT INTO ") + sql.Identifier(table_name)
     col_names = (
-        list(set(chain.from_iterable(v.model_dump().keys() for v in values.values)))
-        if isinstance(values.values, list)
-        else values.values.model_dump().keys()
+        list(set(chain.from_iterable(v.model_dump(exclude_none=True).keys() for v in values)))
+        if isinstance(values, list)
+        else values.model_dump().keys()
     )
-    if not isinstance(values.values, list):
-        values = Values([values.values])
+    if not isinstance(values, list):
+        values = [values]
     vals, row_sqls = [], []
-    for v in values.values:
+    for v in values:
         placeholders, fields = [], v.model_dump(exclude_none=True)
         for c in col_names:
             if c in fields:
@@ -70,15 +71,13 @@ def _expand_values(query: Query, values: Values) -> tuple[Composed, tuple]:
     columns_sql = (
         sql.SQL("(") + sql.SQL(", ").join(sql.Identifier(col) for col in col_names) + sql.SQL(")")
     )
-    if isinstance(query, str):
-        query = sql.SQL(query)
-
     full_statement = query + columns_sql + sql.SQL(" VALUES ") + values_sql + sql.SQL(";")
     # debug = full_statement.as_string()
     return full_statement, tuple(vals)
 
 
 def __pydantic_param_to_values(model: BaseModel | list[BaseModel], **kwargs) -> tuple | list[tuple]:
+    # TODO: This would probably be better suited as a psycopg Dumper.
     return (
         [tuple(m.model_dump(**kwargs).values()) for m in model]
         if isinstance(model, list)

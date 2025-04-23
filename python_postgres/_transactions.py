@@ -4,7 +4,7 @@ from psycopg import AsyncCursor
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
 
-from ._operations import _exec_query, _results
+from ._operations import exec_query, results
 from .types import Params, Query
 
 T = TypeVar("T", bound=BaseModel)
@@ -18,5 +18,5 @@ class Transaction:
     async def __call__(
         self, query: Query, params: Params = (), model: Type[T] = None, **kwargs
     ) -> list[T | tuple] | int:
-        await _exec_query(self._pool, self._cur, query, params, **kwargs)
-        return await _results(self._cur)
+        await exec_query(self._pool, self._cur, query, params, **kwargs)
+        return await results(self._cur)
