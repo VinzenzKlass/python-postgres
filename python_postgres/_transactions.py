@@ -11,13 +11,12 @@ T = TypeVar("T", bound=BaseModel)
 
 
 class Transaction:
-    def __init__(self, pool: AsyncConnectionPool, cur: AsyncCursor, return_raw: bool):
+    def __init__(self, pool: AsyncConnectionPool, cur: AsyncCursor):
         self._cur = cur
         self._pool = pool
-        self._return_raw = return_raw
 
     async def __call__(
         self, query: Query, params: Params = (), model: Type[T] = None, **kwargs
     ) -> list[T | tuple] | int:
         await _exec_query(self._pool, self._cur, query, params, **kwargs)
-        return await _results(self._cur, self._return_raw)
+        return await _results(self._cur)
