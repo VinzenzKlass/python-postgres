@@ -50,7 +50,11 @@ class Postgres:
     async def __call__(self, query: Query, params: Params = (), **kwargs) -> list[tuple] | int: ...
 
     async def __call__(
-        self, query: Query, params: Params = (), model: Optional[Type[T]] = None, **kwargs
+        self,
+        query: Query,
+        params: Params = (),
+        model: Optional[Type[T]] = None,
+        **kwargs,
     ) -> list[T] | list[tuple] | int:
         """
         Execute a query and return the results. Check the `psycopg` documentation for more

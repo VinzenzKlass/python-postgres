@@ -32,7 +32,7 @@ pip install python_postgres
 Given this table:
 
 ```sql
-CREATE TABLE IF NOT EXISTS public.sales
+CREATE TABLE sales
 (
     invoice_id    CHAR(11),
     branch        CHAR,
@@ -173,15 +173,20 @@ You can run the following code:
 
 ```python
 import datetime
-from python_postgres import Values
 from typing import Optional
+
 from pydantic import BaseModel, Field
+
+from python_postgres import Postgres
 
 
 class Comment(BaseModel):
     content: str
     created_at: Optional[datetime.datetime] = Field(default=None)
     updated_at: Optional[datetime.datetime] = Field(default=None)
+
+
+pg = Postgres("pgadmin", "password", "localhost")  # TODO: Set your actual credentials
 
 
 async def main():
@@ -223,8 +228,8 @@ await pg("INSERT INTO comments (content) VALUES (%s);", [("Comment 1",), ("Comme
 
 In these cases you must construct the entire query yourself.
 
-
 ### Transactions
+
 You can use the `transaction` context manager to run a transaction. This will automatically commit the transaction
 when the context manager exits, or rollback it if an exception is raised.
 
@@ -233,12 +238,14 @@ async with pg.transaction() as tran:
     await tran("DELETE FROM comments WHERE id = 1;")
     await tran("INSERT INTO comments (content) VALUES (%s);", [("Comment 1",), ("Comment 2",)])
 ```
-This will execute the two queries in a single transaction and then automatically commit it. If an error occurs, nothing in the transaction scope will be applied, the connection returned to the pool and the error raised:
+
+This will execute the two queries in a single transaction and then automatically commit it. If an error occurs, nothing
+in the transaction scope will be applied, the connection returned to the pool and the error raised:
 
 ```python
 async with pg.transaction() as tran:
     await tran("DELETE FROM comments WHERE id = 38;")  # Not applied
-    await tran("INSERT INTO comments (content) VALUES (%s);", [("Comment 1",), ("Comment 2",)]) # Not applied
+    await tran("INSERT INTO comments (content) VALUES (%s);", [("Comment 1",), ("Comment 2",)])  # Not applied
     raise ValueError("The almighty Elephant has rejected your submission.")
 ```
 
@@ -246,3 +253,9 @@ async with pg.transaction() as tran:
 
 Other than providing simpler syntax through a thin abstraction, this project inherits all the design choices of psycopg,
 including the [caching of query execution plans](https://www.psycopg.org/psycopg3/docs/advanced/prepare.html#index-0)
+
+| id | content                                       | created_at                 | updated_at                 |
+|----|-----------------------------------------------|----------------------------|----------------------------|
+| 8  | This has both created_at and updated_at info. | 2025-04-24 17:06:32.316644 | 2025-04-24 17:06:32.316663 |
+| 9  | This has created_at info.                     | 2025-04-24 17:06:32.316690 | 2025-04-24 15:06:31.499539 |
+| 10 | This has only content.                        | 2025-04-24 15:06:31.499539 | 2025-04-24 15:06:31.499539 |
