@@ -1,4 +1,3 @@
-from itertools import chain
 from typing import LiteralString, Type
 
 import psycopg
@@ -7,7 +6,7 @@ from psycopg.sql import Composed
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
 
-from .types import Params, Query
+from .types import Params, PydanticParams, Query
 
 
 async def exec_query(
@@ -43,18 +42,24 @@ async def results(cur: AsyncCursor) -> list[Type[BaseModel] | tuple] | int:
     return await cur.fetchall()
 
 
-def expand_values(
-    table_name: LiteralString, values: BaseModel | list[BaseModel]
-) -> tuple[Composed, tuple]:
-    # TODO: Refactor to avoid all the redundant work.
+def expand_values(table_name: LiteralString, values: PydanticParams) -> tuple[Composed, tuple]:
     query = sql.SQL("INSERT INTO ") + sql.Identifier(table_name)
-    col_names = (
-        list(set(chain.from_iterable(v.model_dump(exclude_none=True).keys() for v in values)))
-        if isinstance(values, list)
-        else values.model_dump().keys()
-    )
-    if not isinstance(values, list):
-        values = [values]
+    if isinstance(values, BaseModel):
+        raw = values.model_dump(exclude_none=True)
+        vals = tuple(raw.values())
+        return query + sql.SQL("(") + sql.SQL(", ").join(
+            sql.Identifier(k) for k in raw.keys()
+        ) + sql.SQL(")") + sql.SQL("VALUES") + sql.SQL("(") + sql.SQL(", ").join(
+            sql.Placeholder() for _ in range(len(vals))
+        ) + sql.SQL(")"), vals
+
+    col_names = set()
+    processed_values = []
+    for val in values:
+        fields = val.model_dump(exclude_none=True)
+        col_names.update(fields.keys())
+        processed_values.append(fields)
+
     vals, row_sqls = [], []
     for v in values:
         placeholders, fields = [], v.model_dump(exclude_none=True)

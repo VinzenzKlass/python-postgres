@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from ._operations import exec_query, expand_values
 from ._transactions import Transaction
-from .types import Params, Query
+from .types import Params, PydanticParams, Query
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -78,8 +78,26 @@ class Postgres:
                 )
 
     async def insert(
-        self, table_name: LiteralString, params: BaseModel | list[BaseModel], prepare: bool = False
+        self, table_name: LiteralString, params: PydanticParams, prepare: bool = False
     ) -> int:
+        """
+        Dynamically expand an insert query to correctly handle pydantic models with optional
+        fields, applying default values rather than explicitly passing `None` to the query. This
+        always produces one single Query. The column names to insert are determined by all the
+        non-None across all given models.
+
+        This will not be particularly efficient for large inserts and solves a specific problem. If
+        you have uniform models and can construct one query to achieve the same, you should prefer
+        that.
+
+        :param table_name: The name of the table to insert into.
+        :param params: The Pydantic model or list of models to insert.
+        :param prepare: Whether to use prepared statements. Default is False, due to the dynamic
+                        nature and possibly rather large size of the query.
+        :return: The number of rows inserted.
+        """
+        if isinstance(params, list) and not params:
+            return 0
         await self._ensure_open()
         query, params = expand_values(table_name, params)
         async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
