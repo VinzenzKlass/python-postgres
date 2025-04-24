@@ -180,6 +180,8 @@ This will produce the following rows:
 | 9  | This has created_at info.                     | 2025-04-24 17:06:32.316690 | 2025-04-24 15:06:31.499539 |
 | 10 | This has only content.                        | 2025-04-24 15:06:31.499539 | 2025-04-24 15:06:31.499539 |
 
+With this, the fields that were `null` before correctly get populated with the default values from the database, as is evident by the fact that all 3 of them hold identical values.
+
 !!! tip 
     Note that this specifically addresses the insertion of non-uniform models. If you are inserting a list of
     models that all have the same fields, you can still use the regular `INSERT INTO` syntax and pass the models
