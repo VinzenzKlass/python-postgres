@@ -53,32 +53,28 @@ def expand_values(table_name: LiteralString, values: PydanticParams) -> tuple[Co
             sql.Placeholder() for _ in range(len(vals))
         ) + sql.SQL(")"), vals
 
-    col_names = set()
-    processed_values = []
-    for val in values:
-        fields = val.model_dump(exclude_none=True)
-        col_names.update(fields.keys())
-        processed_values.append(fields)
-
-    vals, row_sqls = [], []
+    models, col_names, row_sqls, row_values = [], set(), [], []
     for v in values:
-        placeholders, fields = [], v.model_dump(exclude_none=True)
+        m_dict = v.model_dump(exclude_none=True)
+        models.append(m_dict)
+        col_names.update(m_dict.keys())
+
+    for model in models:
+        placeholders, row = [], []
         for c in col_names:
-            if c in fields:
+            if c in model:
                 placeholders.append(sql.Placeholder())
-                vals.append(fields[c])
+                row.append(model[c])
             else:
                 placeholders.append(sql.DEFAULT)
-        row_sql = sql.SQL("(") + sql.SQL(", ").join(placeholders) + sql.SQL(")")
-        row_sqls.append(row_sql)
-    values_sql = sql.SQL(", ").join(row_sqls)
-
+        row_sqls.append(sql.SQL("(") + sql.SQL(", ").join(placeholders) + sql.SQL(")"))
+        row_values.extend(row)
     columns_sql = (
         sql.SQL("(") + sql.SQL(", ").join(sql.Identifier(col) for col in col_names) + sql.SQL(")")
     )
-    full_statement = query + columns_sql + sql.SQL(" VALUES ") + values_sql + sql.SQL(";")
+    full_statement = query + columns_sql + sql.SQL("VALUES") + sql.SQL(", ").join(row_sqls)
     # debug = full_statement.as_string()
-    return full_statement, tuple(vals)
+    return full_statement, tuple(row_values)
 
 
 def __pydantic_param_to_values(model: BaseModel | list[BaseModel], **kwargs) -> tuple | list[tuple]:
