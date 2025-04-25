@@ -99,7 +99,7 @@ In real-world examples, you may often find queries like this:
             WHERE
                 p.product_id = ANY (
                        SELECT
-                           (jsonb_array_elements(o.items) ->> 'product_id')::INTEGER
+                           (JSONB_ARRAY_ELEMENTS(o.items) ->> 'product_id')::INTEGER
                        )
             ORDER BY
                 p.price DESC
