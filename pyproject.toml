@@ -1,11 +1,11 @@
 [project]
 name = "python-postgres"
-version = "0.0.9"
-description = "Combine the flexibility and power of PostgreSQL witht the convenienceof ORMs."
+version = "0.0.10"
+description = "Combine the flexibility and power of PostgreSQL with the convenience of ORMs."
 authors = [{ name = "Vinzenz Klass", email = "vinzenz.klass@valantic.com" }]
 readme = "README.md"
 requires-python = ">=3.12"
-keywords = ["python-postgres", "postgres", "PostgreSQL", "psql"]
+keywords = ["postgres", "PostgreSQL", "psql", "python-postgres"]
 
 dependencies = [
     "psycopg[pool]>=3.2.0",
