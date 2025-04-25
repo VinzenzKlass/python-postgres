@@ -1,12 +1,10 @@
 <p align="center" style="margin: 0 0 10px">
-    <img width="300" height="300" src="docs/img/logo.webp" alt='Python Postgres' style="border-radius: 15px">
+    <img width="300" height="300" src="https://vinzenzklass.github.io/python-postgres/img/logo.webp" alt='Python Postgres' style="border-radius: 15px">
 </p>
 
-<h2 align="center" style="font-size: 3rem; font-weight: 400; margin: -15px 0">
-Python Postgres
-</h2>
-
----
+<h1 align="center">
+    Python Postgres
+</h1>
 
 Python Postgres aims to simplify PostgreSQL interaction in Python. It's a thin abstraction
 over [psycopg](https://www.psycopg.org/psycopg3/docs/index.html) that uses SQL, avoiding ORM-specific syntax while
