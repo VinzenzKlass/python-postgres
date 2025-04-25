@@ -3,6 +3,7 @@ from typing import LiteralString, Type
 import psycopg
 from psycopg import AsyncCursor, sql
 from psycopg.sql import Composed
+from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
 
@@ -24,7 +25,7 @@ async def exec_query(
         elif isinstance(params, BaseModel) or (
             isinstance(params, list) and isinstance(params[0], BaseModel)
         ):
-            params = __pydantic_param_to_values(params, **kwargs)
+            params = _pydantic_param_to_values(params, **kwargs)
         if isinstance(params, list):
             await cur.executemany(query, params)
             return
@@ -46,7 +47,7 @@ def expand_values(table_name: LiteralString, values: PydanticParams) -> tuple[Co
     query = sql.SQL("INSERT INTO ") + sql.Identifier(table_name)
     if isinstance(values, BaseModel):
         raw = values.model_dump(exclude_none=True)
-        vals = tuple(raw.values())
+        vals = tuple(Jsonb(v) if isinstance(v, dict) else v for v in raw.values())
         return query + sql.SQL("(") + sql.SQL(", ").join(
             sql.Identifier(k) for k in raw.keys()
         ) + sql.SQL(")") + sql.SQL("VALUES") + sql.SQL("(") + sql.SQL(", ").join(
@@ -64,7 +65,8 @@ def expand_values(table_name: LiteralString, values: PydanticParams) -> tuple[Co
         for c in col_names:
             if c in model:
                 placeholders.append(sql.Placeholder())
-                row.append(model[c])
+                row_val = model[c]
+                row.append(Jsonb(row_val) if isinstance(row_val, dict) else row_val)
             else:
                 placeholders.append(sql.DEFAULT)
         row_sqls.append(sql.SQL("(") + sql.SQL(", ").join(placeholders) + sql.SQL(")"))
@@ -77,10 +79,16 @@ def expand_values(table_name: LiteralString, values: PydanticParams) -> tuple[Co
     return full_statement, tuple(row_values)
 
 
-def __pydantic_param_to_values(model: BaseModel | list[BaseModel], **kwargs) -> tuple | list[tuple]:
-    # TODO: This would probably be better suited as a psycopg Dumper.
+def _model_to_values(model: BaseModel, **kwargs) -> tuple:
+    return tuple(
+        Jsonb(v) if isinstance(v, dict) else v
+        for v in model.model_dump(**kwargs, exclude_none=True).values()
+    )
+
+
+def _pydantic_param_to_values(model: BaseModel | list[BaseModel], **kwargs) -> tuple | list[tuple]:
     return (
-        [tuple(m.model_dump(**kwargs).values()) for m in model]
+        [_model_to_values(m, **kwargs) for m in model]
         if isinstance(model, list)
-        else tuple(model.model_dump(**kwargs).values())
+        else _model_to_values(model, **kwargs)
     )
