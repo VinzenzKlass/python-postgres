@@ -1,0 +1,77 @@
+site_name: Python Postgres
+site_description: Convenience Wrapper for psycopg
+site_url: https://vinzenzklass.github.io/python-postgres/
+repo_name: VinzenzKlass/python-postgres
+repo_url: https://github.com/VinzenzKlass/python-postgres
+
+
+theme:
+  name: 'material'
+  palette:
+    - scheme: 'default'
+      media: '(prefers-color-scheme: light)'
+      primary: indigo
+      toggle:
+        icon: 'material/lightbulb'
+        name: "Switch to dark mode"
+    - scheme: 'slate'
+      media: '(prefers-color-scheme: dark)'
+      primary: indigo
+      toggle:
+        icon: 'material/lightbulb-outline'
+        name: 'Switch to light mode'
+  features:
+    - content.code.copy
+    - content.tabs.link
+    - search.suggest
+
+  favicon: "img/favicon.webp"
+  logo: "img/favicon.webp"
+  icon:
+    annotation: material/plus-circle
+    repo: fontawesome/brands/github
+
+nav:
+  - Introduction: 'index.md'
+  - Installation: 'installation.md'
+  - Rationale: 'rationale.md'
+  - Quick Start: 'quickstart.md'
+  - Guides:
+      - Applications: 'guides/client.md'
+  - API Reference:
+      - Postgres Client: 'api/client.md'
+
+
+watch:
+  - "python_postgres"
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            separate_signature: true
+            show_signature_annotations: true
+            line_length: 80
+            docstring_style: sphinx
+            members_order: source
+            group_by_category: false
+            show_source: false
+            show_bases: false
+
+
+extra_javascript:
+  - js/highlight.min.js
+
+extra_css:
+  - css/styles.css
+
+markdown_extensions:
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.highlight:
+      use_pygments: false
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition

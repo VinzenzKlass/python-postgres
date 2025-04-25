@@ -1,19 +1,15 @@
-import datetime
-from itertools import chain
-from typing import Type
+from typing import LiteralString, Type
 
 import psycopg
 from psycopg import AsyncCursor, sql
 from psycopg.sql import Composed
 from psycopg_pool import AsyncConnectionPool
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel
 
-from ._adapters import Values
-from .exceptions import PGError
-from .types import Params, Query
+from .types import Params, PydanticParams, Query
 
 
-async def _exec_query(
+async def exec_query(
     pool: AsyncConnectionPool,
     cur: AsyncCursor,
     query: Query,
@@ -25,8 +21,6 @@ async def _exec_query(
         if not params:
             await cur.execute(query)
             return
-        if isinstance(params, Values):
-            query, params = _expand_values(query, params)
         elif isinstance(params, BaseModel) or (
             isinstance(params, list) and isinstance(params[0], BaseModel)
         ):
@@ -37,86 +31,56 @@ async def _exec_query(
         await cur.execute(query, params)
     except psycopg.OperationalError as error:
         if is_retry:
-            raise PGError from error
+            raise error
         await pool.check()
-        await _exec_query(pool, cur, query, params, True)
+        await exec_query(pool, cur, query, params, True)
 
 
-async def _results(
-    cur: AsyncCursor, raw: bool, model: Type[BaseModel] = None
-) -> list[Type[BaseModel] | tuple] | int:
+async def results(cur: AsyncCursor) -> list[Type[BaseModel] | tuple] | int:
     if not cur.pgresult or not cur.description or cur.rowcount == 0:
         return cur.rowcount
-    if raw:
-        return await cur.fetchall()
-    cols = {
-        col.name: (__pg_types(col.type_display) | None, Field(default=None))
-        for col in cur.description
-    }
-    col_names = cols.keys()
-    model = model or create_model("Result", **cols)
-    return [
-        model.model_validate(dict(zip(col_names, row, strict=True))) for row in await cur.fetchall()
-    ]
+    return await cur.fetchall()
 
 
-def _expand_values(query: Query, values: Values) -> tuple[Composed, tuple]:
-    col_names = (
-        list(set(chain.from_iterable(v.model_dump().keys() for v in values.values)))
-        if isinstance(values.values, list)
-        else values.values.model_dump().keys()
-    )
-    if not isinstance(values.values, list):
-        values = Values([values.values])
-    vals, row_sqls = [], []
-    for v in values.values:
-        placeholders, fields = [], v.model_dump(exclude_none=True)
+def expand_values(table_name: LiteralString, values: PydanticParams) -> tuple[Composed, tuple]:
+    query = sql.SQL("INSERT INTO ") + sql.Identifier(table_name)
+    if isinstance(values, BaseModel):
+        raw = values.model_dump(exclude_none=True)
+        vals = tuple(raw.values())
+        return query + sql.SQL("(") + sql.SQL(", ").join(
+            sql.Identifier(k) for k in raw.keys()
+        ) + sql.SQL(")") + sql.SQL("VALUES") + sql.SQL("(") + sql.SQL(", ").join(
+            sql.Placeholder() for _ in range(len(vals))
+        ) + sql.SQL(")"), vals
+
+    models, col_names, row_sqls, row_values = [], set(), [], []
+    for v in values:
+        m_dict = v.model_dump(exclude_none=True)
+        models.append(m_dict)
+        col_names.update(m_dict.keys())
+
+    for model in models:
+        placeholders, row = [], []
         for c in col_names:
-            if c in fields:
+            if c in model:
                 placeholders.append(sql.Placeholder())
-                vals.append(fields[c])
+                row.append(model[c])
             else:
                 placeholders.append(sql.DEFAULT)
-        row_sql = sql.SQL("(") + sql.SQL(", ").join(placeholders) + sql.SQL(")")
-        row_sqls.append(row_sql)
-    values_sql = sql.SQL(", ").join(row_sqls)
-
+        row_sqls.append(sql.SQL("(") + sql.SQL(", ").join(placeholders) + sql.SQL(")"))
+        row_values.extend(row)
     columns_sql = (
         sql.SQL("(") + sql.SQL(", ").join(sql.Identifier(col) for col in col_names) + sql.SQL(")")
     )
-    if isinstance(query, str):
-        query = sql.SQL(query)
-
-    full_statement = query + columns_sql + sql.SQL(" VALUES ") + values_sql + sql.SQL(";")
+    full_statement = query + columns_sql + sql.SQL("VALUES") + sql.SQL(", ").join(row_sqls)
     # debug = full_statement.as_string()
-    return full_statement, tuple(vals)
+    return full_statement, tuple(row_values)
 
 
 def __pydantic_param_to_values(model: BaseModel | list[BaseModel], **kwargs) -> tuple | list[tuple]:
+    # TODO: This would probably be better suited as a psycopg Dumper.
     return (
         [tuple(m.model_dump(**kwargs).values()) for m in model]
         if isinstance(model, list)
         else tuple(model.model_dump(**kwargs).values())
     )
-
-
-def __pg_types(raw: str) -> Type:
-    if "datetime" in raw or "timestamp" in raw:
-        return datetime.datetime
-    if "date" in raw:
-        return datetime.date
-    if "json" in raw:
-        return dict
-    if "int" in raw:
-        return int
-    if "bool" in raw:
-        return bool
-    if "float" in raw:
-        return float
-    if "numeric" in raw:
-        return float
-    if "double" in raw:
-        return float
-    if "bytea" in raw:
-        return bytes
-    return str

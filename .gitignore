@@ -8,6 +8,8 @@ __pycache__/
 .iml
 
 debug.py
+test.py
+models.py
 # Distribution / packaging
 .Python
 build/
