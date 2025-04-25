@@ -1,6 +1,6 @@
 [project]
 name = "python-postgres"
-version = "0.0.8a1"
+version = "0.0.8"
 description = "Combine the flexibility and power of PostgreSQL witht the convenienceof ORMs."
 authors = [{ name = "Vinzenz Klass", email = "vinzenz.klass@valantic.com" }]
 readme = "README.md"
@@ -26,7 +26,7 @@ dev = [
 ]
 
 [project.urls]
-"Documentation" = "https://vinzenzklass.github.io/python-postgres/"
+"Documentation" = "https://vinzenzklass.github.io/python-postgres"
 "Repository" = "https://github.com/VinzenzKlass/python-postgres"
 "Psycopg Docs" = "https://www.psycopg.org/psycopg3/docs/index.html"
 
