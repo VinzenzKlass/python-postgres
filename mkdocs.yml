@@ -36,8 +36,11 @@ nav:
   - Installation: 'installation.md'
   - Rationale: 'rationale.md'
   - Quick Start: 'quickstart.md'
+  - Guides:
+      - Applications: 'guides/client.md'
   - API Reference:
       - Postgres Client: 'api/client.md'
+
 
 watch:
   - "python_postgres"
@@ -53,6 +56,7 @@ plugins:
             line_length: 80
             docstring_style: sphinx
             members_order: source
+            group_by_category: false
             show_source: false
             show_bases: false
 

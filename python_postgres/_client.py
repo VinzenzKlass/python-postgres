@@ -162,7 +162,6 @@ class Postgres:
             async with con.transaction():
                 async with con.cursor(binary=True) as cur:  # type: psycopg.AsyncCursor
                     yield Transaction(self._pool, cur)
-                    await con.commit()
 
     @asynccontextmanager
     async def connection(self) -> AsyncIterator[psycopg.AsyncConnection]:
@@ -173,6 +172,14 @@ class Postgres:
         await self._ensure_open()
         async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
             yield con
+
+    @property
+    def is_open(self) -> bool:
+        """
+        Check if the pool is open and available for new clients.
+        :return: True if the pool is open, False otherwise.
+        """
+        return self.__open
 
     async def close(self) -> None:
         """
