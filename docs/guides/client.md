@@ -140,7 +140,7 @@ and constraints, but rewriting this query in an ORM syntax would probably be som
 interested in the result of this query and not in the tables themselves.
 
 ??? tip "Actually ..."
-    You could of course use a view for the above, but that cn both be unwanted for a whole number of reasons, and is
+    You could of course use a view for the above, but that can both be unwanted for a whole number of reasons, and is
     besides the point of this illustrative example.
 
 With Python Postgres, you can simply run this query and get a pydantic model with the result:
