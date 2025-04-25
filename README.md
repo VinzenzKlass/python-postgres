@@ -2,9 +2,9 @@
     <img width="300" height="300" src="docs/img/logo.webp" alt='Python Postgres' style="border-radius: 15px">
 </p>
 
-<h1 align="center" style="font-size: 3rem; font-weight: 400; margin: -15px 0">
+<h2 align="center" style="font-size: 3rem; font-weight: 400; margin: -15px 0">
 Python Postgres
-</h1>
+</h2>
 
 ---
 
@@ -17,6 +17,6 @@ retains full SQL flexibility and access to underlying psycopg features.
 
 Visit [Python Postgres](https://vinzenzklass.github.io/python-postgres/) for more information.
 
-If you find any issues or feel that this SDK is not adequately covering your use case,
+If you find any issues or have some suggestions,
 please [open an issue](https://github.com/VinzenzKlass/python-postgres/issues/new).
 
