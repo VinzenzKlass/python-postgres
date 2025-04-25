@@ -1,5 +1,5 @@
 site_name: Python Postgres
-site_description: Convenience Wrapper for psycopg
+site_description: Combine the flexibility and power of PostgreSQL with the convenience of ORMs.
 site_url: https://vinzenzklass.github.io/python-postgres/
 repo_name: VinzenzKlass/python-postgres
 repo_url: https://github.com/VinzenzKlass/python-postgres
