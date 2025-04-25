@@ -49,7 +49,7 @@ def expand_values(
     query = sql.SQL("INSERT INTO ") + sql.Identifier(table_name)
     if isinstance(values, BaseModel):
         raw = values.model_dump(**kwargs, exclude_none=True)
-        vals = tuple(Jsonb(v) if isinstance(v, dict) else v for v in raw.values())
+        vals = tuple(Jsonb(v) if _is_json(v) else v for v in raw.values())
         return query + sql.SQL("(") + sql.SQL(", ").join(
             sql.Identifier(k) for k in raw.keys()
         ) + sql.SQL(")") + sql.SQL("VALUES") + sql.SQL("(") + sql.SQL(", ").join(
@@ -68,7 +68,7 @@ def expand_values(
             if c in model:
                 placeholders.append(sql.Placeholder())
                 row_val = model[c]
-                row.append(Jsonb(row_val) if isinstance(row_val, dict) else row_val)
+                row.append(Jsonb(row_val) if _is_json(row_val) else row_val)
             else:
                 placeholders.append(sql.DEFAULT)
         row_sqls.append(sql.SQL("(") + sql.SQL(", ").join(placeholders) + sql.SQL(")"))
@@ -81,9 +81,13 @@ def expand_values(
     return full_statement, tuple(row_values)
 
 
+def _is_json(value: object) -> bool:
+    return isinstance(value, dict) or (isinstance(value, list) and isinstance(value[0], dict))
+
+
 def _model_to_values(model: BaseModel, **kwargs) -> tuple:
     return tuple(
-        Jsonb(v) if isinstance(v, dict) else v
+        Jsonb(v) if _is_json(v) else v
         for v in model.model_dump(**kwargs, exclude_none=True).values()
     )
 

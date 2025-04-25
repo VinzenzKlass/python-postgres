@@ -102,7 +102,11 @@ print(raw)
 
 ## Pydantic Models
 
-Alternatively, you can pass Pydantic models as query parameters, and you can get results as models:
+Alternatively, you can pass Pydantic models as query parameters, and you can get results as models. Nested Models or 
+models with dictionaries as fields are supported as well. If you pass models with either, those fields will get 
+serialized to the Postgres `JSONB` type. `JSON` and `JSONB` fields are automatically parsed when reading them from the 
+database. Serializing to `JSON` is currently not supported. Fields of type `list[dict]` will be serialized to `JSONB` 
+as well.
 
 ```python
 await pg(
@@ -188,5 +192,30 @@ This will produce the following rows:
 | 9  | This has created_at info.                     | 2025-04-24 17:06:32.316690 | 2025-04-24 15:06:31.499539 |
 | 10 | This has only content.                        | 2025-04-24 15:06:31.499539 | 2025-04-24 15:06:31.499539 |
 
-With this, the fields that were `null` before correctly get populated with the default values from the database, as is evident by the fact that all 3 of them hold identical values.
+With this, the fields that were `null` before correctly get populated with the default values from the database, as is 
+evident by the fact that all 3 of them hold identical values.
 
+## Transactions
+You can use the transaction context manager to run a transaction. This will automatically commit the transaction when 
+the context manager exits, or rollback it if an exception is raised.
+
+```python
+async with pg.transaction() as tran:
+    await tran("DELETE FROM comments WHERE id = 1;")
+    await tran(
+        "INSERT INTO comments (content) VALUES (%s);",
+        [("Comment 1",), ("Comment 2",)],
+    )
+```
+This will execute the two queries in a single transaction and then automatically commit it. If an error occurs, nothing 
+in the transaction scope will be applied, the connection returned to the pool and the error raised. Nothing from the 
+following block will be applied, for example:
+```python
+async with pg.transaction() as tran:
+    await tran("DELETE FROM comments WHERE id = 38;")
+    await tran(
+        "INSERT INTO comments (content) VALUES (%s);",
+        [("Comment 1",), ("Comment 2",)],
+    )
+    raise ValueError("The almighty Elephant has rejected your submission.")
+```
