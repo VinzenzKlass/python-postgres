@@ -107,16 +107,16 @@ class Postgres:
         :param params: The parameters to pass to the query.
         :param model: The Pydantic model to parse the results into. If not provided, a new
                       model with all columns in the query will be used.
-        :param kwargs: Keyword arguments passed to the Pydantic validation method,
-               such as `by_alias`, `exclude`, etc. This is usually the easiest way to
-               make sure your model fits the table schema definition.
+        :param kwargs: Keyword arguments passed to the Pydantic serialization method, such as
+               `by_alias`, `exclude`, etc. This is usually the easiest way to make sure your model
+               fits the table schema definition. **`exclude_none` is always set.**
         :return: The results of the query.
         """
         await self._ensure_open()
         row_factory = class_row(model) if model else None
         async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
             async with con.cursor(binary=True, row_factory=row_factory) as cur:  # type: psycopg.AsyncCursor
-                await exec_query(self._pool, cur, query, params)
+                await exec_query(self._pool, cur, query, params, **kwargs)
                 return (
                     cur.rowcount
                     if not cur.pgresult or not cur.description or cur.rowcount == 0
@@ -124,7 +124,7 @@ class Postgres:
                 )
 
     async def insert(
-        self, table_name: LiteralString, params: PydanticParams, prepare: bool = False
+        self, table_name: LiteralString, params: PydanticParams, prepare: bool = False, **kwargs
     ) -> int:
         """
         Dynamically expand an insert query to correctly handle pydantic models with optional
@@ -140,12 +140,15 @@ class Postgres:
         :param params: The Pydantic model or list of models to insert.
         :param prepare: Whether to use prepared statements. Default is False, due to the dynamic
                         nature and possibly rather large size of the query.
+        :param kwargs: Keyword arguments passed to the Pydantic serialization method, such as
+               `by_alias`, `exclude`, etc. This is usually the easiest way to make sure your model
+               fits the table schema definition. **`exclude_none` is always set.**
         :return: The number of rows inserted.
         """
         if isinstance(params, list) and not params:
             return 0
         await self._ensure_open()
-        query, params = expand_values(table_name, params)
+        query, params = expand_values(table_name, params, **kwargs)
         async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
             async with con.cursor(binary=True) as cur:  # type: psycopg.AsyncCursor
                 await cur.execute(query, params, prepare=prepare)

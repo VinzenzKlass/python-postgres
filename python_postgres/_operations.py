@@ -43,10 +43,12 @@ async def results(cur: AsyncCursor) -> list[Type[BaseModel] | tuple] | int:
     return await cur.fetchall()
 
 
-def expand_values(table_name: LiteralString, values: PydanticParams) -> tuple[Composed, tuple]:
+def expand_values(
+    table_name: LiteralString, values: PydanticParams, **kwargs
+) -> tuple[Composed, tuple]:
     query = sql.SQL("INSERT INTO ") + sql.Identifier(table_name)
     if isinstance(values, BaseModel):
-        raw = values.model_dump(exclude_none=True)
+        raw = values.model_dump(**kwargs, exclude_none=True)
         vals = tuple(Jsonb(v) if isinstance(v, dict) else v for v in raw.values())
         return query + sql.SQL("(") + sql.SQL(", ").join(
             sql.Identifier(k) for k in raw.keys()
@@ -56,7 +58,7 @@ def expand_values(table_name: LiteralString, values: PydanticParams) -> tuple[Co
 
     models, col_names, row_sqls, row_values = [], set(), [], []
     for v in values:
-        m_dict = v.model_dump(exclude_none=True)
+        m_dict = v.model_dump(**kwargs, exclude_none=True)
         models.append(m_dict)
         col_names.update(m_dict.keys())
 
