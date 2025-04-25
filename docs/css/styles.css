@@ -2,6 +2,10 @@
     --md-primary-fg-color: #3C67EA;
 }
 
+:root, [data-md-color-scheme=default] {
+    --md-code-bg-color: #fAfAfA;
+}
+
 .md-typeset .tabbed-labels:before {
     background: none !important;
     border-bottom: .1rem solid;
@@ -59,8 +63,12 @@
     text-decoration: underline
 }
 
+.hljs-sql-text {
+    color: var(--md-code-fg-color);
+}
+
 .language-pgsql .hljs-type {
-   color: #D55FDE
+    color: #D55FDE
 }
 
 .language-pgsql .hljs-built_in {
