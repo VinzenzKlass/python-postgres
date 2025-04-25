@@ -25,6 +25,8 @@ theme:
     - content.tabs.link
     - search.suggest
 
+  favicon: "img/favicon.webp"
+  logo: "img/favicon.webp"
   icon:
     annotation: material/plus-circle
     repo: fontawesome/brands/github
@@ -34,6 +36,11 @@ nav:
   - Installation: 'installation.md'
   - Rationale: 'rationale.md'
   - Quick Start: 'quickstart.md'
+  - API Reference:
+      - Postgres Client: 'api/client.md'
+
+watch:
+  - "python_postgres"
 
 plugins:
   - search
@@ -43,7 +50,7 @@ plugins:
           options:
             separate_signature: true
             show_signature_annotations: true
-            line_length: 88
+            line_length: 80
             docstring_style: sphinx
             members_order: source
             show_source: false
@@ -61,6 +68,6 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.highlight:
       use_pygments: false
-  - pymdownx.blocks.tab:
+  - pymdownx.tabbed:
       alternate_style: true
   - admonition

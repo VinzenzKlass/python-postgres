@@ -1,16 +1,20 @@
 [project]
 name = "python-postgres"
-version = "0.0.7"
-description = "Python Postgres aims to provide the simplest way to interact with PostgreSQL databases."
+version = "0.0.8a1"
+description = "Combine the flexibility and power of PostgreSQL witht the convenienceof ORMs."
 authors = [{ name = "Vinzenz Klass", email = "vinzenz.klass@valantic.com" }]
 readme = "README.md"
 requires-python = ">=3.12"
 keywords = ["python-postgres", "postgres", "PostgreSQL"]
 
 dependencies = [
-    "psycopg[pool,c]>=3.2.5",
-    "pydantic>=2.10.6",
+    "psycopg[pool]>=3.2.0",
+    "pydantic>=2.10.0",
 ]
+
+[project.optional-dependencies]
+c = ["psycopg[c]>=3.2.0"]
+binary = ["psycopg[binary]>=3.2.0"]
 
 [dependency-groups]
 dev = [
@@ -22,6 +26,7 @@ dev = [
 ]
 
 [project.urls]
+"Documentation" = "https://vinzenzklass.github.io/python-postgres/"
 "Repository" = "https://github.com/VinzenzKlass/python-postgres"
 "Psycopg Docs" = "https://www.psycopg.org/psycopg3/docs/index.html"
 

@@ -119,6 +119,8 @@ print(res)
 ```
 
 ??? info "See Output"
+    Note that this does not impact your query. The `SELECT *` query will still return all columns and send them over
+    network, they will just not be included in the result set.
     ```python
     [
         Comment(
@@ -172,6 +174,12 @@ This still only produces one single query, inserting `DEFAULT` values where appr
 ```python
 await pg.insert("comments", comments)
 ```
+
+!!! tip "You may not need this"
+    Note that this specifically addresses the insertion of non-uniform models. If you are inserting a list of
+    models that all have the same fields, you can still use the regular `INSERT INTO` syntax and pass the models
+    as parameters directly, which is more efficient and allows for more elaborate Insert queries.
+
 This will produce the following rows:
 
 | id | content                                       | created_at                 | updated_at                 |
@@ -182,7 +190,3 @@ This will produce the following rows:
 
 With this, the fields that were `null` before correctly get populated with the default values from the database, as is evident by the fact that all 3 of them hold identical values.
 
-!!! tip 
-    Note that this specifically addresses the insertion of non-uniform models. If you are inserting a list of
-    models that all have the same fields, you can still use the regular `INSERT INTO` syntax and pass the models
-    as parameters directly, which is more efficient and allows for more elaborate Insert queries.
