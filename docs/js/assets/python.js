@@ -374,7 +374,7 @@ export default function (hljs) {
                     },
                     {
                         className: 'type',
-                        begin: /\s*%s(?:\s*,\s*%s)*\s*/,
+                        begin: /%s/,
                     },
                     {
                         className: 'sql-text',
