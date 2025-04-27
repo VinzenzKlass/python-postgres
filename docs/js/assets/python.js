@@ -264,7 +264,7 @@ export default function (hljs) {
         + 'DEFERRABLE RANGE '
         + 'DESC DISTINCT ELSE EXCEPT FOR FREEZE|10 FROM FULL HAVING '
         + 'ILIKE IN INITIALLY INNER INTERSECT IS ISNULL JOIN LATERAL LEADING LIKE LIMIT '
-        + 'NATURAL NOT NOTNULL NULL OFFSET ON ONLY OR ORDER OUTER OVERLAPS PLACING PRIMARY '
+        + 'NATURAL NOT NOTNULL NULL OFFSET ON ONLY ORDER OR OUTER OVERLAPS PLACING PRIMARY '
         + 'REFERENCES RETURNING SIMILAR SOME SYMMETRIC TABLESAMPLE THEN '
         + 'TRAILING UNION UNIQUE USING VARIADIC|10 VERBOSE WHEN WHERE WINDOW WITH '
         + 'BY RETURNS INOUT OUT SETOF|10 IF STRICT CURRENT CONTINUE OWNER LOCATION OVER PARTITION WITHIN '
@@ -282,7 +282,7 @@ export default function (hljs) {
         + 'RESTART CYCLE GENERATED IDENTITY DEFERRED IMMEDIATE LEVEL LOGGED UNLOGGED '
         + 'OF NOTHING NONE EXCLUDE ATTRIBUTE '
         + 'USAGE ROUTINES '
-        + 'TRUE FALSE NAN INFINITY ';
+        + 'TRUE FALSE NAN INFINITY KEY vector';
 
     return {
         name: 'Python',
@@ -378,7 +378,11 @@ export default function (hljs) {
                     },
                     {
                         className: 'sql-text',
-                        match: /[;*,+_a-z]|\(|\)/,
+                        match: /[;*,+_a-z<>\-=]|\(|\)/,
+                    },
+                    {
+                        className: 'number',
+                        match: /\b\d+\b/,
                     }
                 ]
             },

@@ -1,45 +1,38 @@
-## Setup
-
-To run the Quickstart examples, you will need the following Table:
-
-```postgresql
-CREATE TABLE comments
-(
-    id         SMALLSERIAL PRIMARY KEY,
-    content    TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-some values to get started:
-
-```postgresql
-INSERT INTO comments (content)
-VALUES ('This is a comment'),
-       ('This is another comment');
-```
-
-and the following Python setup code:
-
-```python
-from datetime import datetime
-from typing import Optional
-
-from pydantic import BaseModel, Field
-
-from python_postgres import Postgres
-
-
-class Comment(BaseModel):
-    content: str
-    created_at: Optional[datetime] = Field(default=None)
-    updated_at: Optional[datetime] = Field(default=None)
-
-
-# TODO: Set your actual credentials
-pg = Postgres("postgres", "password", "localhost")
-```
+??? example "Setup"
+    
+    To run the Quickstart examples, you will need the following Table:
+    
+    ```postgresql
+    CREATE TABLE comments
+    (
+        id         SMALLSERIAL PRIMARY KEY,
+        content    TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    ```
+    
+    some values to get started:
+    
+    ```postgresql
+    INSERT INTO comments (content)
+    VALUES ('This is a comment'),
+           ('This is another comment');
+    ```
+    
+    and the following Python setup code:
+    
+    ```python
+    from datetime import datetime
+    from typing import Optional
+    
+    from pydantic import BaseModel, Field
+    
+    class Comment(BaseModel):
+        content: str
+        created_at: Optional[datetime] = Field(default=None)
+        updated_at: Optional[datetime] = Field(default=None)
+    ```
 
 ## Basic Usage
 
@@ -50,6 +43,11 @@ Connection Pool and calling it will acquire a Connection from the Pool, spawn a 
 After the query, the connection is returned to the Pool. Some examples:
 
 ```python
+from python_postgres import Postgres
+
+
+# TODO: Set your actual credentials
+pg = Postgres("postgres", "password", "localhost")
 await pg(
     "INSERT INTO comments (content) VALUES (%s);", ("Hello from Python!",)
 )  # You can pass a list of tuples to insert multiple rows at once
