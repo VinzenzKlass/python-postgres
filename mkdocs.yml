@@ -38,6 +38,7 @@ nav:
   - Quick Start: 'quickstart.md'
   - Guides:
       - Applications: 'guides/client.md'
+      - Extensions: 'guides/extensions.md'
   - API Reference:
       - Postgres Client: 'api/client.md'
 
