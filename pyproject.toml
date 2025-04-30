@@ -1,6 +1,6 @@
 [project]
 name = "python-postgres"
-version = "0.0.13"
+version = "0.0.14"
 description = "Combine the flexibility and power of PostgreSQL with the convenience of ORMs."
 authors = [{ name = "Vinzenz Klass", email = "vinzenz.klass@valantic.com" }]
 readme = "README.md"
