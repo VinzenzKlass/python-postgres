@@ -69,8 +69,9 @@ class Postgres:
         """
 
         async def configure(con: psycopg.AsyncConnection) -> None:
-            for func in patch:  # We cannot assume concurrency is safe.
-                await func(con)
+            if patch:
+                for func in patch:  # We cannot assume concurrency is safe.
+                    await func(con)
             await con.set_autocommit(True)
 
         self._uri = f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{database}"
@@ -127,6 +128,36 @@ class Postgres:
                     if not cur.pgresult or not cur.description or cur.rowcount == 0
                     else await cur.fetchall()
                 )
+
+    @overload
+    async def one(
+        self, query: Query, params: Params = (), *, model: Type[T], **kwargs
+    ) -> T | None: ...
+
+    @overload
+    async def one(self, query: Query, params: Params = (), **kwargs) -> tuple | None: ...
+
+    async def one(
+        self, query: Query, params: Params = (), model: Optional[Type[T]] = None, **kwargs
+    ) -> T | tuple | None:
+        """
+        Execute a query and return the first result, or None if no results are found. Otherwise,
+        this behaves identically to the `__call__` method.
+        :param query: The query to execute.
+        :param params: The parameters to pass to the query.
+        :param model: The Pydantic model to parse the results into. If not provided, a new
+                      model with all columns in the query will be used.
+        :param kwargs: Keyword arguments passed to the Pydantic serialization method, such as
+               `by_alias`, `exclude`, etc. This is usually the easiest way to make sure your model
+               fits the table schema definition. **`exclude_none` is always set.**
+        :return: The first result of the query, or None if there isn't one.
+        """
+        await self._ensure_open()
+        row_factory = class_row(model) if model else None
+        async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
+            async with con.cursor(binary=True, row_factory=row_factory) as cur:  # type: psycopg.AsyncCursor
+                await exec_query(self._pool, cur, query, params, **kwargs)
+                return await cur.fetchone()
 
     async def insert(
         self,
