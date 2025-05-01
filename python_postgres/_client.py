@@ -73,6 +73,7 @@ class Postgres:
                 for func in patch:  # We cannot assume concurrency is safe.
                     await func(con)
             await con.set_autocommit(True)
+            con._prepared.prepare_threshold = 2
 
         self._uri = f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{database}"
         self._pool = AsyncConnectionPool(
@@ -111,8 +112,7 @@ class Postgres:
 
         :param query: The query to execute.
         :param params: The parameters to pass to the query.
-        :param model: The Pydantic model to parse the results into. If not provided, a new
-                      model with all columns in the query will be used.
+        :param model: The Pydantic model to parse the results into.
         :param kwargs: Keyword arguments passed to the Pydantic serialization method, such as
                `by_alias`, `exclude`, etc. This is usually the easiest way to make sure your model
                fits the table schema definition. **`exclude_none` is always set.**
@@ -170,7 +170,7 @@ class Postgres:
         Dynamically expand an insert query to correctly handle pydantic models with optional
         fields, applying default values rather than explicitly passing `None` to the query. This
         always produces one single Query. The column names to insert are determined by all the
-        non-None across all given models.
+        non-`None` fields across all given models.
 
         This will not be particularly efficient for large inserts and solves a specific problem. If
         you have uniform models and can construct one query to achieve the same, you should prefer

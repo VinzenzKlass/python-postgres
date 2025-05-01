@@ -22,7 +22,7 @@ async def exec_query(
         if not params:
             await cur.execute(query)
             return
-        elif isinstance(params, BaseModel) or (
+        if isinstance(params, BaseModel) or (
             isinstance(params, list) and isinstance(params[0], BaseModel)
         ):
             params = _pydantic_param_to_values(params, **kwargs)
@@ -92,7 +92,7 @@ def _model_to_values(model: BaseModel, **kwargs) -> tuple:
     )
 
 
-def _pydantic_param_to_values(model: BaseModel | list[BaseModel], **kwargs) -> tuple | list[tuple]:
+def _pydantic_param_to_values(model: PydanticParams, **kwargs) -> tuple | list[tuple]:
     return (
         [_model_to_values(m, **kwargs) for m in model]
         if isinstance(model, list)
