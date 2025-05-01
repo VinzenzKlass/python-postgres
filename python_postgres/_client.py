@@ -73,7 +73,6 @@ class Postgres:
                 for func in patch:  # We cannot assume concurrency is safe.
                     await func(con)
             await con.set_autocommit(True)
-            con._prepared.prepare_threshold = 2
 
         self._uri = f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{database}"
         self._pool = AsyncConnectionPool(
