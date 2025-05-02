@@ -1,4 +1,4 @@
-from typing import LiteralString, Type
+from typing import LiteralString, Optional, Type
 
 import psycopg
 from psycopg import AsyncCursor, sql
@@ -44,17 +44,28 @@ async def results(cur: AsyncCursor) -> list[Type[BaseModel] | tuple] | int:
 
 
 def expand_values(
-    table_name: LiteralString, values: PydanticParams, **kwargs
+    table_name: LiteralString,
+    values: PydanticParams,
+    returning: Optional[list[LiteralString]] = None,
+    **kwargs,
 ) -> tuple[Composed, tuple]:
     query = sql.SQL("INSERT INTO ") + sql.Identifier(table_name)
     if isinstance(values, BaseModel):
         raw = values.model_dump(**kwargs, exclude_none=True)
         vals = tuple(Jsonb(v) if _is_json(v) else v for v in raw.values())
-        return query + sql.SQL("(") + sql.SQL(", ").join(
-            sql.Identifier(k) for k in raw.keys()
-        ) + sql.SQL(")") + sql.SQL("VALUES") + sql.SQL("(") + sql.SQL(", ").join(
-            sql.Placeholder() for _ in range(len(vals))
-        ) + sql.SQL(")"), vals
+        statement = (
+            query
+            + sql.SQL("(")
+            + sql.SQL(", ").join(sql.Identifier(k) for k in raw.keys())
+            + sql.SQL(")")
+            + sql.SQL("VALUES")
+            + sql.SQL("(")
+            + sql.SQL(", ").join(sql.Placeholder() for _ in range(len(vals)))
+            + sql.SQL(")")
+        )
+        statement = _returning(statement, returning)
+        # debug = statement.as_string()
+        return statement, vals
 
     models, col_names, row_sqls, row_values = [], set(), [], []
     for v in values:
@@ -76,9 +87,21 @@ def expand_values(
     columns_sql = (
         sql.SQL("(") + sql.SQL(", ").join(sql.Identifier(col) for col in col_names) + sql.SQL(")")
     )
-    full_statement = query + columns_sql + sql.SQL("VALUES") + sql.SQL(", ").join(row_sqls)
-    # debug = full_statement.as_string()
-    return full_statement, tuple(row_values)
+    statement = _returning(
+        query + columns_sql + sql.SQL("VALUES") + sql.SQL(", ").join(row_sqls), returning
+    )
+    # debug = statement.as_string()
+    return statement, tuple(row_values)
+
+
+def _returning(statement: Composed, returning: Optional[list[LiteralString]] = None) -> Composed:
+    return (
+        statement
+        + sql.SQL("RETURNING ")
+        + sql.SQL(", ").join(sql.Identifier(col) for col in returning)
+        if returning
+        else statement
+    )
 
 
 def _is_json(value: object) -> bool:

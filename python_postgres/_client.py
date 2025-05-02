@@ -163,8 +163,9 @@ class Postgres:
         table_name: LiteralString,
         params: PydanticParams,
         prepare: bool = False,
+        returning: Optional[list[LiteralString]] = None,
         **kwargs,
-    ) -> int:
+    ) -> list[tuple] | tuple | int:
         """
         Dynamically expand an insert query to correctly handle pydantic models with optional
         fields, applying default values rather than explicitly passing `None` to the query. This
@@ -179,18 +180,22 @@ class Postgres:
         :param params: The Pydantic model or list of models to insert.
         :param prepare: Whether to use prepared statements. Default is False, due to the dynamic
                         nature and possibly rather large size of the query.
+        :param returning: An optional list of Column Names to return after the insert.
         :param kwargs: Keyword arguments passed to the Pydantic serialization method, such as
                `by_alias`, `exclude`, etc. This is usually the easiest way to make sure your model
                fits the table schema definition. **`exclude_none` is always set.**
         :return: The number of rows inserted.
         """
-        if isinstance(params, list) and not params:
+        is_multiple = isinstance(params, list)
+        if is_multiple and not params:
             return 0
         await self._ensure_open()
-        query, params = expand_values(table_name, params, **kwargs)
+        query, params = expand_values(table_name, params, returning, **kwargs)
         async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
             async with con.cursor(binary=True) as cur:  # type: psycopg.AsyncCursor
                 await cur.execute(query, params, prepare=prepare)
+                if returning:
+                    return await cur.fetchall() if is_multiple else await cur.fetchone()
                 return cur.rowcount
 
     @asynccontextmanager
