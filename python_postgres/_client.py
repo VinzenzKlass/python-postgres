@@ -1,12 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import (
-    AsyncIterator,
-    LiteralString,
-    Optional,
-    Type,
-    TypeVar,
-    overload,
-)
+from typing import AsyncIterator, LiteralString, Optional, Type, TypeVar, overload
 from urllib.parse import quote_plus
 
 import psycopg
@@ -18,7 +11,7 @@ from ._operations import exec_query, expand_values
 from ._transactions import Transaction
 from .types import AsyncConnectionPatch, Params, PydanticParams, Query
 
-T = TypeVar("T", bound=BaseModel)
+T = TypeVar("T", bound=(BaseModel | dict))
 
 
 class Postgres:
@@ -99,7 +92,12 @@ class Postgres:
     async def __call__(self, query: Query, params: Params = (), **kwargs) -> list[tuple] | int: ...
 
     async def __call__(
-        self, query: Query, params: Params = (), model: Optional[Type[T]] = None, **kwargs
+        self,
+        query: Query,
+        params: Params = (),
+        binary: bool = True,
+        model: Optional[Type[T]] = None,
+        **kwargs,
     ) -> list[T] | list[tuple] | int:
         """
         Execute a query and return the results, or the number of affected rows. You can pass any
@@ -111,6 +109,9 @@ class Postgres:
 
         :param query: The query to execute.
         :param params: The parameters to pass to the query.
+        :param binary: Whether to use binary mode for the cursor. Default is True, which is more
+               performant for most queries, but may not work with all queries. If you need to use
+               text mode i.e. for type adapters, set this to False.
         :param model: The Pydantic model to parse the results into.
         :param kwargs: Keyword arguments passed to the Pydantic serialization method, such as
                `by_alias`, `exclude`, etc. This is usually the easiest way to make sure your model
@@ -120,7 +121,7 @@ class Postgres:
         await self._ensure_open()
         row_factory = class_row(model) if model else None
         async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
-            async with con.cursor(binary=True, row_factory=row_factory) as cur:  # type: psycopg.AsyncCursor
+            async with con.cursor(binary=binary, row_factory=row_factory) as cur:  # type: psycopg.AsyncCursor
                 await exec_query(self._pool, cur, query, params, **kwargs)
                 return (
                     cur.rowcount
@@ -137,7 +138,12 @@ class Postgres:
     async def one(self, query: Query, params: Params = (), **kwargs) -> tuple | None: ...
 
     async def one(
-        self, query: Query, params: Params = (), model: Optional[Type[T]] = None, **kwargs
+        self,
+        query: Query,
+        params: Params = (),
+        binary: bool = True,
+        model: Optional[Type[T]] = None,
+        **kwargs,
     ) -> T | tuple | None:
         """
         Execute a query and return the first result, or None if no results are found. Otherwise,
@@ -146,6 +152,9 @@ class Postgres:
         :param params: The parameters to pass to the query.
         :param model: The Pydantic model to parse the results into. If not provided, a new
                       model with all columns in the query will be used.
+        :param binary: Whether to use binary mode for the cursor. Default is True, which is more
+               performant for most queries, but may not work with all queries. If you need to use
+               text mode i.e. for type adapters, set this to False.
         :param kwargs: Keyword arguments passed to the Pydantic serialization method, such as
                `by_alias`, `exclude`, etc. This is usually the easiest way to make sure your model
                fits the table schema definition. **`exclude_none` is always set.**
@@ -154,7 +163,7 @@ class Postgres:
         await self._ensure_open()
         row_factory = class_row(model) if model else None
         async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
-            async with con.cursor(binary=True, row_factory=row_factory) as cur:  # type: psycopg.AsyncCursor
+            async with con.cursor(binary=binary, row_factory=row_factory) as cur:  # type: psycopg.AsyncCursor
                 await exec_query(self._pool, cur, query, params, **kwargs)
                 return await cur.fetchone()
 
@@ -163,6 +172,7 @@ class Postgres:
         table_name: LiteralString,
         params: PydanticParams,
         prepare: bool = False,
+        binary: bool = True,
         returning: Optional[list[LiteralString]] = None,
         **kwargs,
     ) -> list[tuple] | tuple | int:
@@ -180,6 +190,9 @@ class Postgres:
         :param params: The Pydantic model or list of models to insert.
         :param prepare: Whether to use prepared statements. Default is False, due to the dynamic
                         nature and possibly rather large size of the query.
+        :param binary: Whether to use binary mode for the cursor. Default is True, which is more
+               performant for most queries, but may not work with all queries. If you need to use
+               text mode i.e. for type adapters, set this to False.
         :param returning: An optional list of Column Names to return after the insert.
         :param kwargs: Keyword arguments passed to the Pydantic serialization method, such as
                `by_alias`, `exclude`, etc. This is usually the easiest way to make sure your model
@@ -192,22 +205,26 @@ class Postgres:
         await self._ensure_open()
         query, params = expand_values(table_name, params, returning, **kwargs)
         async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
-            async with con.cursor(binary=True) as cur:  # type: psycopg.AsyncCursor
+            async with con.cursor(binary=binary) as cur:  # type: psycopg.AsyncCursor
                 await cur.execute(query, params, prepare=prepare)
                 if returning:
                     return await cur.fetchall() if is_multiple else await cur.fetchone()
                 return cur.rowcount
 
     @asynccontextmanager
-    async def transaction(self) -> AsyncIterator[Transaction]:
+    async def transaction(self, binary: bool = True) -> AsyncIterator[Transaction]:
         """
         Create a transaction context manager to execute multiple queries in a single transaction.
         You can call the transaction the same way you would call the `Postgres` instance itself.
+
+        :param binary: Whether to use binary mode for the cursor. Default is True, which is more
+               performant for most queries, but may not work with all queries. If you need to use
+               text mode i.e. for type adapters, set this to False.
         """
         await self._ensure_open()
         async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
             async with con.transaction():
-                async with con.cursor(binary=True) as cur:  # type: psycopg.AsyncCursor
+                async with con.cursor(binary=binary) as cur:  # type: psycopg.AsyncCursor
                     yield Transaction(self._pool, cur)
 
     @asynccontextmanager
