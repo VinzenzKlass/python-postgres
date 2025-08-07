@@ -1,4 +1,4 @@
-from typing import LiteralString, Optional, Type
+from typing import LiteralString, Optional
 
 import psycopg
 from psycopg import AsyncCursor, sql
@@ -35,12 +35,6 @@ async def exec_query(
             raise error
         await pool.check()
         await exec_query(pool, cur, query, params, True)
-
-
-async def results(cur: AsyncCursor) -> list[Type[BaseModel] | tuple] | int:
-    if not cur.pgresult or not cur.description or cur.rowcount == 0:
-        return cur.rowcount
-    return await cur.fetchall()
 
 
 def expand_values(
