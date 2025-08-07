@@ -86,10 +86,10 @@ class Postgres:
     @overload
     async def __call__(
         self, query: Query, params: Params = (), *, model: Type[T], **kwargs
-    ) -> list[T] | int: ...
+    ) -> list[T]: ...
 
     @overload
-    async def __call__(self, query: Query, params: Params = (), **kwargs) -> list[tuple] | int: ...
+    async def __call__(self, query: Query, params: Params = (), **kwargs) -> list[tuple]: ...
 
     async def __call__(
         self,
@@ -98,7 +98,7 @@ class Postgres:
         binary: bool = True,
         model: Optional[Type[T]] = None,
         **kwargs,
-    ) -> list[T] | list[tuple] | int:
+    ) -> list[T] | list[tuple]:
         """
         Execute a query and return the results, or the number of affected rows. You can pass any
         query to this method. The Connections in the pool are in `autocommit` mode by default. This
@@ -123,11 +123,7 @@ class Postgres:
         async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
             async with con.cursor(binary=binary, row_factory=row_factory) as cur:  # type: psycopg.AsyncCursor
                 await exec_query(self._pool, cur, query, params, **kwargs)
-                return (
-                    cur.rowcount
-                    if not cur.pgresult or not cur.description or cur.rowcount == 0
-                    else await cur.fetchall()
-                )
+                return await cur.fetchall()
 
     @overload
     async def one(
@@ -197,7 +193,8 @@ class Postgres:
         :param kwargs: Keyword arguments passed to the Pydantic serialization method, such as
                `by_alias`, `exclude`, etc. This is usually the easiest way to make sure your model
                fits the table schema definition. **`exclude_none` is always set.**
-        :return: The number of rows inserted.
+        :return: If `returning` is provided, returns the specified columns. Otherwise, returns the
+                 number of rows affected by the insert.
         """
         is_multiple = isinstance(params, list)
         if is_multiple and not params:

@@ -1,6 +1,6 @@
 [project]
 name = "python-postgres"
-version = "0.0.16"
+version = "0.0.17"
 description = "Combine the flexibility and power of PostgreSQL with the convenience of ORMs."
 authors = [{ name = "Vinzenz Klass", email = "vinzenz.klass@valantic.com" }]
 readme = "README.md"
@@ -69,7 +69,7 @@ fix = true
 target-version = "py313"
 
 [tool.ruff.format]
-skip-magic-trailing-comma = false
+skip-magic-trailing-comma = true
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I"]

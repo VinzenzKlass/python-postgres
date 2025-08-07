@@ -529,7 +529,7 @@ wheels = [
 
 [[package]]
 name = "python-postgres"
-version = "0.0.16"
+version = "0.0.17"
 source = { editable = "." }
 dependencies = [
     { name = "psycopg", extra = ["pool"] },
