@@ -27,4 +27,4 @@ class Transaction:
         self, query: Query, params: Params = (), model: Type[T] = None, **kwargs
     ) -> list[T | tuple]:
         await exec_query(self._pool, self._cur, query, params, **kwargs)
-        return await self._cur.fetchall() if self._cur.rownumber else []
+        return (await self._cur.fetchall()) if self._cur.rownumber is not None else []

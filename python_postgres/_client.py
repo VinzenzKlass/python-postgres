@@ -123,7 +123,7 @@ class Postgres:
         async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
             async with con.cursor(binary=binary, row_factory=row_factory) as cur:  # type: psycopg.AsyncCursor
                 await exec_query(self._pool, cur, query, params, **kwargs)
-                return await cur.fetchall() if cur.rownumber else []
+                return (await cur.fetchall()) if cur.rownumber is not None else []
 
     @overload
     async def one(
