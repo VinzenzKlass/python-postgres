@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://vinzenzklass.github.io/python-postgres/</loc>
+         <lastmod>2025-08-19</lastmod>
+    </url>
+    <url>
+         <loc>https://vinzenzklass.github.io/python-postgres/installation/</loc>
+         <lastmod>2025-08-19</lastmod>
+    </url>
+    <url>
+         <loc>https://vinzenzklass.github.io/python-postgres/quickstart/</loc>
+         <lastmod>2025-08-19</lastmod>
+    </url>
+    <url>
+         <loc>https://vinzenzklass.github.io/python-postgres/rationale/</loc>
+         <lastmod>2025-08-19</lastmod>
+    </url>
+    <url>
+         <loc>https://vinzenzklass.github.io/python-postgres/api/client/</loc>
+         <lastmod>2025-08-19</lastmod>
+    </url>
+    <url>
+         <loc>https://vinzenzklass.github.io/python-postgres/guides/client/</loc>
+         <lastmod>2025-08-19</lastmod>
+    </url>
+    <url>
+         <loc>https://vinzenzklass.github.io/python-postgres/guides/extensions/</loc>
+         <lastmod>2025-08-19</lastmod>
+    </url>
+</urlset>
