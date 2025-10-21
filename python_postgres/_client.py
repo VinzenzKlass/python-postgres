@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, LiteralString, Optional, Type, TypeVar, overload
+from typing import Any, AsyncIterator, LiteralString, Optional, Type, TypeVar, overload
 from urllib.parse import quote_plus
 
 import psycopg
@@ -162,6 +162,30 @@ class Postgres:
             async with con.cursor(binary=binary, row_factory=row_factory) as cur:  # type: psycopg.AsyncCursor
                 await exec_query(self._pool, cur, query, params, **kwargs)
                 return await cur.fetchone()
+
+    async def value(
+        self, query: Query, params: Params = (), binary: bool = True, **kwargs
+    ) -> Any | None:
+        """
+        Similar to `one`, but returns only the first value of the first tuple in the resultset,
+        or None if no results are found. This is useful for queries that return a single value,
+        like `COUNT(*)` or `MAX(column)`.
+        :param query: The query to execute.
+        :param params: The parameters to pass to the query.
+        :param binary: Whether to use binary mode for the cursor. Default is True, which is more
+               performant for most queries, but may not work with all queries. If you need to use
+               text mode i.e. for type adapters, set this to False.
+        :param kwargs: Keyword arguments passed to the Pydantic serialization method, such as
+               `by_alias`, `exclude`, etc. This is usually the easiest way to make sure your model
+               fits the table schema definition. **`exclude_none` is always set.**
+        :return: The first result of the query, or None if there isn't one.
+        """
+        await self._ensure_open()
+        async with self._pool.connection() as con:
+            async with con.cursor(binary=binary) as cur:
+                await exec_query(self._pool, cur, query, params, **kwargs)
+                res = await cur.fetchone()
+                return res[0] if res else None
 
     async def insert(
         self,
