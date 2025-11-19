@@ -231,11 +231,9 @@ class Postgres:
         async with self._pool.connection() as con:
             async with con.cursor(binary=binary) as cur:
                 await cur.execute(query, parsed, prepare=prepare)
-                return (
-                    (await (cur.fetchall() if is_multiple else cur.fetchone()))
-                    if returning
-                    else None
-                )
+                if not returning:
+                    return None
+                return await (cur.fetchall() if is_multiple else cur.fetchone())
 
     @asynccontextmanager
     async def transaction(self, binary: bool = True) -> AsyncIterator[Transaction]:
