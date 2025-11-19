@@ -6,5 +6,5 @@ from pydantic import BaseModel
 
 type Query = LiteralString | SQL | Composed
 type PydanticParams = BaseModel | list[BaseModel]
-type Params = tuple | list[tuple] | PydanticParams
+type Params = tuple[Any, ...] | list[tuple[Any, ...]] | PydanticParams
 type AsyncConnectionPatch = Iterable[Callable[[AsyncConnection], Coroutine[Any, Any, None]]]
