@@ -11,7 +11,7 @@ from ._operations import exec_query, expand_values
 from ._transactions import Transaction
 from .types import AsyncConnectionPatch, Params, PydanticParams, Query
 
-T = TypeVar("T", bound=(BaseModel | dict))
+T = TypeVar("T", bound=(BaseModel | dict[str, Any]))
 
 
 class Postgres:
@@ -85,11 +85,13 @@ class Postgres:
 
     @overload
     async def __call__(
-        self, query: Query, params: Params = (), *, model: Type[T], **kwargs
+        self, query: Query, params: Params = (), *, model: Type[T], **kwargs: Any
     ) -> list[T]: ...
 
     @overload
-    async def __call__(self, query: Query, params: Params = (), **kwargs) -> list[tuple]: ...
+    async def __call__(
+        self, query: Query, params: Params = (), **kwargs: Any
+    ) -> list[tuple[Any, ...]]: ...
 
     async def __call__(
         self,
@@ -97,8 +99,8 @@ class Postgres:
         params: Params = (),
         binary: bool = True,
         model: Optional[Type[T]] = None,
-        **kwargs,
-    ) -> list[T] | list[tuple]:
+        **kwargs: Any,
+    ) -> list[T] | list[tuple[Any, ...]]:
         """
         Execute a query and return the results, or the number of affected rows. You can pass any
         query to this method. The Connections in the pool are in `autocommit` mode by default. This
@@ -120,18 +122,20 @@ class Postgres:
         """
         await self._ensure_open()
         row_factory = class_row(model) if model else None
-        async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
-            async with con.cursor(binary=binary, row_factory=row_factory) as cur:  # type: psycopg.AsyncCursor
-                await exec_query(self._pool, cur, query, params, **kwargs)
+        async with self._pool.connection() as con:
+            async with con.cursor(binary=binary, row_factory=row_factory) as cur:  # pyright: ignore[reportArgumentType]
+                await exec_query(self._pool, cur, query, params, **kwargs)  # pyright: ignore[reportArgumentType]
                 return (await cur.fetchall()) if cur.rownumber is not None else []
 
     @overload
     async def one(
-        self, query: Query, params: Params = (), *, model: Type[T], **kwargs
+        self, query: Query, params: Params = (), *, model: Type[T], **kwargs: Any
     ) -> T | None: ...
 
     @overload
-    async def one(self, query: Query, params: Params = (), **kwargs) -> tuple | None: ...
+    async def one(
+        self, query: Query, params: Params = (), **kwargs: Any
+    ) -> tuple[Any, ...] | None: ...
 
     async def one(
         self,
@@ -139,8 +143,8 @@ class Postgres:
         params: Params = (),
         binary: bool = True,
         model: Optional[Type[T]] = None,
-        **kwargs,
-    ) -> T | tuple | None:
+        **kwargs: Any,
+    ) -> T | tuple[Any, ...] | None:
         """
         Execute a query and return the first result, or None if no results are found. Otherwise,
         this behaves identically to the `__call__` method.
@@ -158,13 +162,13 @@ class Postgres:
         """
         await self._ensure_open()
         row_factory = class_row(model) if model else None
-        async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
-            async with con.cursor(binary=binary, row_factory=row_factory) as cur:  # type: psycopg.AsyncCursor
-                await exec_query(self._pool, cur, query, params, **kwargs)
+        async with self._pool.connection() as con:
+            async with con.cursor(binary=binary, row_factory=row_factory) as cur:  # pyright: ignore[reportArgumentType]
+                await exec_query(self._pool, cur, query, params, **kwargs)  # pyright: ignore[reportArgumentType]
                 return await cur.fetchone()
 
     async def value(
-        self, query: Query, params: Params = (), binary: bool = True, **kwargs
+        self, query: Query, params: Params = (), binary: bool = True, **kwargs: Any
     ) -> Any | None:
         """
         Similar to `one`, but returns only the first value of the first tuple in the resultset,
@@ -193,9 +197,9 @@ class Postgres:
         params: PydanticParams,
         prepare: bool = False,
         binary: bool = True,
-        returning: Optional[list[LiteralString]] = None,
-        **kwargs,
-    ) -> list[tuple] | tuple | int:
+        returning: list[LiteralString] | None = None,
+        **kwargs: Any,
+    ) -> list[tuple[Any, ...]] | tuple[Any, ...] | None:
         """
         Dynamically expand an insert query to correctly handle pydantic models with optional
         fields, applying default values rather than explicitly passing `None` to the query. This
@@ -217,20 +221,19 @@ class Postgres:
         :param kwargs: Keyword arguments passed to the Pydantic serialization method, such as
                `by_alias`, `exclude`, etc. This is usually the easiest way to make sure your model
                fits the table schema definition. **`exclude_none` is always set.**
-        :return: If `returning` is provided, returns the specified columns. Otherwise, returns the
-                 number of rows affected by the insert.
+        :return: If `returning` is provided, returns the specified columns.
         """
         is_multiple = isinstance(params, list)
         if is_multiple and not params:
-            return 0
+            return None
         await self._ensure_open()
-        query, params = expand_values(table_name, params, returning, **kwargs)
-        async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
-            async with con.cursor(binary=binary) as cur:  # type: psycopg.AsyncCursor
-                await cur.execute(query, params, prepare=prepare)
-                if returning:
-                    return await cur.fetchall() if is_multiple else await cur.fetchone()
-                return cur.rowcount
+        query, parsed = expand_values(table_name, params, returning, **kwargs)
+        async with self._pool.connection() as con:
+            async with con.cursor(binary=binary) as cur:
+                await cur.execute(query, parsed, prepare=prepare)
+                if not returning:
+                    return None
+                return await (cur.fetchall() if is_multiple else cur.fetchone())
 
     @asynccontextmanager
     async def transaction(self, binary: bool = True) -> AsyncIterator[Transaction]:
@@ -243,9 +246,9 @@ class Postgres:
                text mode i.e. for type adapters, set this to False.
         """
         await self._ensure_open()
-        async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
+        async with self._pool.connection() as con:
             async with con.transaction():
-                async with con.cursor(binary=binary) as cur:  # type: psycopg.AsyncCursor
+                async with con.cursor(binary=binary) as cur:
                     yield Transaction(self._pool, cur)
 
     @asynccontextmanager
@@ -255,7 +258,7 @@ class Postgres:
         autocommit mode by default.**
         """
         await self._ensure_open()
-        async with self._pool.connection() as con:  # type: psycopg.AsyncConnection
+        async with self._pool.connection() as con:
             yield con
 
     @property
