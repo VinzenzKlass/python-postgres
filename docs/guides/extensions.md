@@ -1,4 +1,4 @@
-You can use extensions that require extending the driver by for e.g. adding additional types. If the extension you're
+You can use extensions that require extending the driver, for example by adding additional types. If the extension you're
 interested in provides such an extension compatible with psycopg `AsyncConnection`, you can use it as you would with
 psycopg directly. You can pass these extensions to the `patch` parameter when instantiating your instance of
 `Postgres`.
