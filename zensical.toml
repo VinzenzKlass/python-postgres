@@ -1,0 +1,73 @@
+[project]
+site_name = "Python Postgres"
+site_description = "Combine the flexibility and power of PostgreSQL with the convenience of ORMs."
+site_url = "https://vinzenzklass.github.io/python-postgres/"
+repo_url = "https://github.com/VinzenzKlass/python-postgres"
+repo_name = "VinzenzKlass/python-postgres"
+watch = ["python_postgres"]
+extra_css = ["css/styles.css"]
+extra_javascript = ["js/highlight.min.js"]
+
+nav = [
+    { "Introduction" = "index.md" },
+    { "Installation" = "installation.md" },
+    { "Rationale" = "rationale.md" },
+    { "Quick Start" = "quickstart.md" },
+    { "Guides" = [
+        { "Applications" = "guides/client.md" },
+        { "Extensions" = "guides/extensions.md" },
+    ] },
+    { "API Reference" = [
+        { "Postgres Client" = "api/client.md" },
+    ] },
+]
+
+[project.theme]
+favicon = "img/favicon.webp"
+logo = "img/favicon.webp"
+features = [
+    "content.code.copy",
+    "content.tabs.link",
+    "search.suggest",
+    "navigation.instant",
+    "navigation.top",
+]
+
+[project.theme.icon]
+annotation = "material/plus-circle"
+repo = "fontawesome/brands/github"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "indigo"
+toggle.icon = "material/lightbulb"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "indigo"
+toggle.icon = "material/lightbulb-outline"
+toggle.name = "Switch to light mode"
+
+[project.markdown_extensions]
+admonition = {}
+pymdownx.details = {}
+pymdownx.highlight.use_pygments = false
+pymdownx.superfences = {}
+pymdownx.tabbed.alternate_style = true
+
+[project.plugins.search]
+enabled = true
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["python_postgres"]
+options.docstring_style = "sphinx"
+options.group_by_category = false
+options.line_length = 80
+options.members_order = "source"
+options.separate_signature = true
+options.show_bases = false
+options.show_signature_annotations = true
+options.show_source = false
