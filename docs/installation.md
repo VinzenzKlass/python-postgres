@@ -1,4 +1,4 @@
-This Project requires `Python>=3.12`.
+This Project requires `Python>=3.13`.
 
 ### Install
 

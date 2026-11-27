@@ -1,6 +1,6 @@
 [project]
 name = "python-postgres"
-version = "0.0.22"
+version = "0.0.23"
 description = "Combine the flexibility and power of PostgreSQL with the convenience of ORMs."
 authors = [{ name = "Vinzenz Klass", email = "vinzenz.klass@valantic.com" }]
 readme = "README.md"
@@ -19,12 +19,11 @@ binary = ["psycopg[binary]>=3.2.0"]
 [dependency-groups]
 dev = [
     "basedpyright>=1.33.0",
-    "mkdocs>=1.6.1",
-    "mkdocs-material>=9.6.12",
-    "mkdocstrings[python]>=0.29.1",
+    "mkdocstrings[python]>=1.0.6",
     "pre-commit>=4.2.0",
-    "pytest>=9.0.1",
+    "pytest>=9.0.3",
     "ruff>=0.11.6",
+    "zensical>=0.0.67",
 ]
 
 [project.urls]

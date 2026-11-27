@@ -83,7 +83,7 @@ print(raw)
     The above code condenses the following `psycopg` code for you (omitting error handling and handling of other cases):
 
     ```python
-    con_str = f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{database}"
+    con_str = make_conninfo(user=user, password=password, host=host, port=port, dbname=database)
     con_pool = AsyncConnectionPool(con_str, min_size=10, max_size=50, open=False)
     
     await con_pool.open()
@@ -115,9 +115,9 @@ await pg(
         updated_at=datetime.now(),
     ),
 )
-# The inferred type of comments will be List[Comment]
+# The inferred type of comments will be list[Comment]
 comments = await pg("SELECT * FROM comments;", model=Comment)
-print(res)
+print(comments)
 ```
 
 ??? info "See Output"
@@ -216,4 +216,28 @@ async with pg.transaction() as tran:
         [("Comment 1",), ("Comment 2",)],
     )
     raise ValueError("The almighty Elephant has rejected your submission.")
+```
+
+## Single Row and Scalar Queries
+
+When you expect at most a single row or a single value, use `one()` or `value()` instead of indexing into a list:
+
+```python
+comment = await pg.one("SELECT * FROM comments WHERE id = %s;", (1,), model=Comment)
+count = await pg.value("SELECT COUNT(*) FROM comments;")
+```
+
+## Connection Options
+
+Connection parameters are built with `psycopg.conninfo.make_conninfo`, so Unix socket paths (such as Cloud SQL), connection URIs, libpq `conninfo` strings, and extra libpq options work directly:
+
+```python
+# Unix socket directory (e.g. Cloud SQL)
+pg = Postgres("postgres", "password", "/cloudsql/project:region:instance", database="mydb")
+
+# Connection URI or libpq conninfo string
+pg = Postgres(conninfo="postgresql://postgres:password@localhost:5432/mydb?sslmode=require")
+
+# Extra libpq parameters
+pg = Postgres("postgres", "password", "localhost", sslmode="require", application_name="my-app")
 ```
