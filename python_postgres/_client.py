@@ -1,8 +1,8 @@
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator, LiteralString, Optional, Type, TypeVar, overload
-from urllib.parse import quote_plus
 
 import psycopg
+from psycopg.conninfo import make_conninfo
 from psycopg.rows import class_row
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
@@ -17,11 +17,11 @@ T = TypeVar("T", bound=(BaseModel | dict[str, Any]))
 class Postgres:
     def __init__(
         self,
-        user: str,
-        password: str,
-        host: str,
-        port: int = 5432,
-        database: str = "postgres",
+        user: Optional[str] = None,
+        password: Optional[str] = None,
+        host: Optional[str] = None,
+        port: Optional[int] = None,
+        database: Optional[str] = None,
         pool_min_size: int = 10,
         pool_max_size: int = 50,
         patch: Optional[AsyncConnectionPatch] = None,
@@ -31,6 +31,9 @@ class Postgres:
         max_lifetime: float = 60 * 60.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
+        *,
+        conninfo: str = "",
+        **kwargs: str | int | None,
     ):
         """
         Initialize the Postgres class to connect to a PostgreSQL database. This will create a
@@ -39,11 +42,17 @@ class Postgres:
         connection while the others are opened in the background and prevents prematurely acquiring
         connections that are not needed.
 
+        Connection parameters are assembled via `psycopg.conninfo.make_conninfo`, so `host` may be
+        a hostname, IP address, or Unix socket directory (such as a Cloud SQL socket path like
+        `/cloudsql/project:region:instance`). Alternatively, pass a PostgreSQL connection URI or
+        libpq keyword/value string via `conninfo`, and any extra libpq parameters via `**kwargs`.
+
         :param user: The username to connect to the database.
         :param password: The password for the given user to connect to the database.
-        :param host: The host of the database.
-        :param port: The port of the database, default is 5432.
-        :param database: The database name to connect to, default is `postgres`.
+        :param host: The host or Unix socket directory of the database.
+        :param port: The port of the database, default is 5432 when connecting without `conninfo`.
+        :param database: The database name to connect to, default is `postgres` when connecting
+                         without `conninfo`.
         :param pool_min_size: The minimum number of connections to keep in the pool.
         :param pool_max_size: The maximum number of connections to keep in the pool.
         :param patch: A list of functions to call on the connection after it is created. This is
@@ -59,6 +68,9 @@ class Postgres:
         :param max_idle: The maximum idle time of a connection in seconds. Default is 10 minutes.
         :param reconnect_timeout: The timeout in seconds to wait for a connection to be reconnected
                                     from the pool. Default is 5 minutes.
+        :param conninfo: A PostgreSQL connection URI or libpq keyword/value connection string.
+                         Explicit connection arguments override values in `conninfo`.
+        :param kwargs: Additional libpq connection parameters (e.g. `sslmode`, `application_name`).
         """
 
         async def configure(con: psycopg.AsyncConnection) -> None:
@@ -67,9 +79,26 @@ class Postgres:
                     await func(con)
             await con.set_autocommit(True)
 
-        self._uri = f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{database}"
+        conn_params: dict[str, str | int | None] = {**kwargs}
+        has_explicit_params = any(p is not None for p in (user, password, host))
+        if user is not None:
+            conn_params["user"] = user
+        if password is not None:
+            conn_params["password"] = password
+        if host is not None:
+            conn_params["host"] = host
+        if port is not None:
+            conn_params["port"] = port
+        elif not conninfo and "port" not in conn_params and has_explicit_params:
+            conn_params["port"] = 5432
+        if database is not None:
+            conn_params["dbname"] = database
+        elif not conninfo and "dbname" not in conn_params and has_explicit_params:
+            conn_params["dbname"] = "postgres"
+
+        self._conninfo = make_conninfo(conninfo, **conn_params)
         self._pool = AsyncConnectionPool(
-            self._uri,
+            self._conninfo,
             min_size=pool_min_size,
             max_size=pool_max_size,
             open=False,
